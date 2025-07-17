@@ -19,17 +19,33 @@ import {
   Image,
   Type,
   Palette,
-  Layout
+  Layout,
+  ExternalLink,
+  Copy
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useLandingPageGenerator } from "@/hooks/useLandingPageGenerator";
 
 const CreateLandingPage = () => {
   const [currentStep, setCurrentStep] = useState(1);
   const [shopeeUrl, setShopeeUrl] = useState("");
-  const [isExtracting, setIsExtracting] = useState(false);
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [extractedData, setExtractedData] = useState<any>(null);
+  const [publishedUrl, setPublishedUrl] = useState<string | null>(null);
   const { toast } = useToast();
+  
+  const {
+    extracting,
+    generating,
+    extractedProduct,
+    generatedPage,
+    error,
+    extractProductData,
+    generateFullLandingPage,
+    saveLandingPage,
+    publishLandingPage,
+    isProcessing,
+    hasProduct,
+    hasGeneratedPage
+  } = useLandingPageGenerator();
 
   const steps = [
     { id: 1, title: "Link da Shopee", description: "Cole o link do produto" },
@@ -37,27 +53,6 @@ const CreateLandingPage = () => {
     { id: 3, title: "Gerar Landing Page", description: "IA criando sua página" },
     { id: 4, title: "Editor & Preview", description: "Personalize e publique" }
   ];
-
-  const mockExtractedData = {
-    name: "Smartphone Samsung Galaxy A54 5G 128GB",
-    price: "R$ 1.299,00",
-    originalPrice: "R$ 1.599,00",
-    images: [
-      "https://images.unsplash.com/photo-1592750475338-74b7b21085ab?w=300",
-      "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=300"
-    ],
-    description: "Smartphone com câmera tripla de 50MP, tela Super AMOLED de 6.4 polegadas, bateria de 5000mAh e processador Exynos 1380.",
-    specifications: {
-      "Tela": "6.4\" Super AMOLED",
-      "Câmera": "50MP Tripla",
-      "Bateria": "5000mAh",
-      "Armazenamento": "128GB",
-      "RAM": "6GB"
-    },
-    category: "Smartphones",
-    rating: 4.8,
-    reviews: 1250
-  };
 
   const handleUrlSubmit = async () => {
     if (!shopeeUrl.includes('shopee.com')) {
@@ -69,33 +64,40 @@ const CreateLandingPage = () => {
       return;
     }
 
-    setIsExtracting(true);
-    
-    // Simulate API call
-    setTimeout(() => {
-      setExtractedData(mockExtractedData);
-      setIsExtracting(false);
+    const product = await extractProductData(shopeeUrl);
+    if (product) {
       setCurrentStep(2);
-      toast({
-        title: "Dados extraídos com sucesso!",
-        description: "Revise as informações do produto"
-      });
-    }, 3000);
+    }
   };
 
   const handleGeneratePage = async () => {
-    setIsGenerating(true);
     setCurrentStep(3);
-    
-    // Simulate AI generation
-    setTimeout(() => {
-      setIsGenerating(false);
+    const page = await generateFullLandingPage();
+    if (page) {
       setCurrentStep(4);
-      toast({
-        title: "Landing page gerada!",
-        description: "Sua página está pronta para personalização"
-      });
-    }, 5000);
+    }
+  };
+
+  const handleSave = async () => {
+    const success = await saveLandingPage(`Landing Page - ${extractedProduct?.name}`);
+    if (success) {
+      // Opcional: redirecionar ou mostrar opções adicionais
+    }
+  };
+
+  const handlePublish = async () => {
+    const url = await publishLandingPage();
+    if (url) {
+      setPublishedUrl(url);
+    }
+  };
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    toast({
+      title: "Copiado!",
+      description: "URL copiada para a área de transferência"
+    });
   };
 
   const renderStepContent = () => {
@@ -122,10 +124,10 @@ const CreateLandingPage = () => {
                   />
                   <Button 
                     onClick={handleUrlSubmit}
-                    disabled={!shopeeUrl || isExtracting}
+                    disabled={!shopeeUrl || extracting}
                     className="min-w-[120px]"
                   >
-                    {isExtracting ? (
+                    {extracting ? (
                       <>
                         <Loader className="mr-2 h-4 w-4 animate-spin" />
                         Extraindo...
@@ -147,7 +149,7 @@ const CreateLandingPage = () => {
                 </p>
               </div>
 
-              {isExtracting && (
+              {extracting && (
                 <div className="space-y-4">
                   <Progress value={33} className="w-full" />
                   <div className="flex items-center justify-center space-x-2 text-sm text-muted-foreground">
@@ -179,30 +181,30 @@ const CreateLandingPage = () => {
                   <div className="space-y-4">
                     <div>
                       <Label>Nome do Produto</Label>
-                      <Input value={extractedData?.name} className="mt-1" />
+                      <Input value={extractedProduct?.name || ""} className="mt-1" />
                     </div>
                     
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <Label>Preço</Label>
-                        <Input value={extractedData?.price} className="mt-1" />
+                        <Input value={extractedProduct?.price || ""} className="mt-1" />
                       </div>
                       <div>
                         <Label>Preço Original</Label>
-                        <Input value={extractedData?.originalPrice} className="mt-1" />
+                        <Input value={extractedProduct?.originalPrice || ""} className="mt-1" />
                       </div>
                     </div>
                     
                     <div>
                       <Label>Categoria</Label>
-                      <Input value={extractedData?.category} className="mt-1" />
+                      <Input value={extractedProduct?.category || ""} className="mt-1" />
                     </div>
                     
                     <div>
                       <Label>Descrição</Label>
                         <textarea 
                           className="w-full min-h-[100px] p-3 border rounded-md" 
-                          value={extractedData?.description || ""}
+                          value={extractedProduct?.description || ""}
                         />
                     </div>
                   </div>
@@ -212,7 +214,7 @@ const CreateLandingPage = () => {
                     <div>
                       <Label>Imagens do Produto</Label>
                       <div className="grid grid-cols-2 gap-2 mt-2">
-                        {extractedData?.images.map((img, idx) => (
+                        {extractedProduct?.images?.map((img, idx) => (
                           <div key={idx} className="relative">
                             <img 
                               src={img} 
@@ -224,10 +226,43 @@ const CreateLandingPage = () => {
                       </div>
                     </div>
                     
+                    {/* Variações */}
+                    {extractedProduct?.variations && (
+                      <div>
+                        <Label>Variações Disponíveis</Label>
+                        <div className="space-y-3 mt-2">
+                          {extractedProduct.variations.colors && (
+                            <div>
+                              <span className="text-sm font-medium text-muted-foreground">Cores:</span>
+                              <div className="flex flex-wrap gap-2 mt-1">
+                                {extractedProduct.variations.colors.map((color, idx) => (
+                                  <Badge key={idx} variant="outline" className="bg-background">
+                                    {color}
+                                  </Badge>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                          {extractedProduct.variations.sizes && (
+                            <div>
+                              <span className="text-sm font-medium text-muted-foreground">Tamanhos:</span>
+                              <div className="flex flex-wrap gap-2 mt-1">
+                                {extractedProduct.variations.sizes.map((size, idx) => (
+                                  <Badge key={idx} variant="outline" className="bg-background">
+                                    {size}
+                                  </Badge>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
                     <div>
                       <Label>Especificações</Label>
                       <div className="space-y-2 mt-2">
-                        {Object.entries(extractedData?.specifications || {}).map(([key, value]) => (
+                        {Object.entries(extractedProduct?.specifications || {}).map(([key, value]) => (
                           <div key={key} className="flex space-x-2">
                             <Input value={key} className="w-1/3" />
                             <Input value={value as string} className="w-2/3" />
@@ -237,8 +272,8 @@ const CreateLandingPage = () => {
                     </div>
 
                     <div className="flex items-center space-x-4 text-sm">
-                      <Badge variant="secondary">⭐ {extractedData?.rating}</Badge>
-                      <Badge variant="outline">{extractedData?.reviews} avaliações</Badge>
+                      <Badge variant="secondary">⭐ {extractedProduct?.rating}</Badge>
+                      <Badge variant="outline">{extractedProduct?.reviews} avaliações</Badge>
                     </div>
                   </div>
                 </div>
@@ -300,11 +335,11 @@ const CreateLandingPage = () => {
                 </TabsList>
                 
                 <div className="flex space-x-2">
-                  <Button variant="outline">
+                  <Button variant="outline" onClick={handleSave} disabled={!hasGeneratedPage}>
                     <Save className="mr-2 h-4 w-4" />
                     Salvar
                   </Button>
-                  <Button className="btn-gradient">
+                  <Button className="btn-gradient" onClick={handlePublish} disabled={!hasGeneratedPage}>
                     <Share2 className="mr-2 h-4 w-4" />
                     Publicar
                   </Button>
@@ -314,41 +349,96 @@ const CreateLandingPage = () => {
               <TabsContent value="preview" className="space-y-0">
                 <Card>
                   <CardHeader>
-                    <CardTitle>Preview da Landing Page</CardTitle>
-                    <CardDescription>
-                      Visualize como sua landing page ficará para os visitantes
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="border rounded-lg p-8 bg-gradient-to-b from-background to-muted/30 min-h-[500px]">
-                      <div className="text-center space-y-6">
-                        <h1 className="text-3xl font-bold">
-                          {extractedData?.name}
-                        </h1>
-                        
-                        <div className="flex justify-center space-x-4">
-                          <img 
-                            src={extractedData?.images[0]} 
-                            alt="Produto"
-                            className="w-48 h-48 object-cover rounded-lg"
-                          />
-                        </div>
-                        
-                        <div className="max-w-2xl mx-auto space-y-4">
-                          <div className="text-center">
-                            <span className="text-3xl font-bold text-primary">{extractedData?.price}</span>
-                            <span className="text-lg text-muted-foreground line-through ml-2">{extractedData?.originalPrice}</span>
-                          </div>
-                          
-                          <p className="text-muted-foreground">
-                            {extractedData?.description}
-                          </p>
-                          
-                          <Button className="btn-gradient text-lg px-8 py-6">
-                            Comprar Agora - 50% OFF
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <CardTitle>Preview da Landing Page</CardTitle>
+                        <CardDescription>
+                          Visualize como sua landing page ficará para os visitantes
+                        </CardDescription>
+                      </div>
+                      {publishedUrl && (
+                        <div className="flex items-center space-x-2">
+                          <Badge variant="secondary" className="bg-green-100 text-green-800">
+                            <CheckCircle className="h-3 w-3 mr-1" />
+                            Publicada
+                          </Badge>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => copyToClipboard(publishedUrl)}
+                          >
+                            <Copy className="h-4 w-4 mr-1" />
+                            Copiar URL
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => window.open(publishedUrl, '_blank')}
+                          >
+                            <ExternalLink className="h-4 w-4 mr-1" />
+                            Abrir
                           </Button>
                         </div>
-                      </div>
+                      )}
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="border rounded-lg bg-gradient-to-b from-background to-muted/30 min-h-[500px]">
+                      {generatedPage ? (
+                        <iframe
+                          srcDoc={generatedPage.html}
+                          className="w-full h-[600px] border-0 rounded-lg"
+                          title="Landing Page Preview"
+                        />
+                      ) : (
+                        <div className="p-8 text-center space-y-6">
+                          <h1 className="text-3xl font-bold">
+                            {extractedProduct?.name}
+                          </h1>
+                          
+                          <div className="flex justify-center space-x-4">
+                            <img 
+                              src={extractedProduct?.images?.[0]} 
+                              alt="Produto"
+                              className="w-48 h-48 object-cover rounded-lg"
+                            />
+                          </div>
+                          
+                          <div className="max-w-2xl mx-auto space-y-4">
+                            <div className="text-center space-y-2">
+                              <div className="flex items-center justify-center space-x-3">
+                                <span className="text-3xl font-bold text-primary">{extractedProduct?.price}</span>
+                                {extractedProduct?.originalPrice && (
+                                  <>
+                                    <span className="text-lg text-muted-foreground line-through">{extractedProduct.originalPrice}</span>
+                                    <Badge variant="destructive" className="text-sm">
+                                      31% OFF
+                                    </Badge>
+                                  </>
+                                )}
+                              </div>
+                              {extractedProduct?.variations?.colors && (
+                                <div className="flex justify-center space-x-2 mt-4">
+                                  <span className="text-sm text-muted-foreground">Disponível em:</span>
+                                  {extractedProduct.variations.colors.map((color, idx) => (
+                                    <Badge key={idx} variant="secondary" className="text-xs">
+                                      {color}
+                                    </Badge>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                            
+                            <p className="text-muted-foreground">
+                              {extractedProduct?.description}
+                            </p>
+                            
+                            <Button className="btn-gradient text-lg px-8 py-6">
+                              {generatedPage?.copy?.cta_principal || "Comprar Agora - 50% OFF"}
+                            </Button>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </CardContent>
                 </Card>
