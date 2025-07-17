@@ -79,14 +79,14 @@ const Features = () => {
             <span>Funcionalidades Poderosas</span>
           </div>
           
-          <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-6">
+          <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold mb-6">
             Tudo que você precisa para{" "}
             <span className="bg-gradient-to-r from-primary to-success bg-clip-text text-transparent">
               vender mais
             </span>
           </h2>
           
-          <p className="text-xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
+          <p className="text-lg text-muted-foreground max-w-3xl mx-auto leading-relaxed">
             Nossa plataforma oferece todas as ferramentas necessárias para transformar produtos da Shopee 
             em landing pages de alta conversão, sem conhecimento técnico.
           </p>

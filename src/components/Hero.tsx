@@ -25,7 +25,7 @@ const Hero = () => {
             </div>
 
             {/* Headline */}
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold leading-tight mb-6">
+            <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold leading-tight mb-6">
               Transforme qualquer{" "}
               <span className="bg-gradient-to-r from-primary via-primary-hover to-success bg-clip-text text-transparent">
                 produto da Shopee
@@ -34,7 +34,7 @@ const Hero = () => {
             </h1>
 
             {/* Subheadline */}
-            <p className="text-xl text-muted-foreground mb-8 leading-relaxed">
+            <p className="text-lg text-muted-foreground mb-8 leading-relaxed">
               Em segundos, nossa IA extrai automaticamente as informações do produto e cria uma landing page otimizada para conversão. Sem design, sem código, apenas resultados.
             </p>
 
