@@ -163,8 +163,18 @@ class AILandingPageGenerator {
   }
 
   private generateAdvancedHTML(productData: ShopeeProduct, copyData: LandingPageCopy): string {
-    const discount = this.calculateDiscount(productData.price, productData.originalPrice);
-    const isKids = productData.name.toLowerCase().includes('infantil') || productData.name.toLowerCase().includes('kids');
+    // Debug logs para verificar dados recebidos
+    console.log('🔍 Dados do produto recebidos:', {
+      name: productData.name,
+      price: productData.price,
+      originalPrice: productData.originalPrice,
+      images: productData.images?.length || 0,
+      url: productData.url,
+      keys: Object.keys(productData)
+    });
+    
+    const discount = this.calculateDiscount(productData.price || '', productData.originalPrice || '');
+    const isKids = (productData.name || '').toLowerCase().includes('infantil') || (productData.name || '').toLowerCase().includes('kids');
     
     return `<!DOCTYPE html>
 <html lang="pt-BR">
@@ -572,7 +582,12 @@ class AILandingPageGenerator {
         function buyNow() {
             // Integração com sistema de compras
             alert('Redirecionando para checkout...');
-            window.open('https://shopee.com.br/${productData.url.split('/').pop()}', '_blank');
+            const productUrl = productData.url || productData.extractedUrl || window.location.href;
+            if (productUrl && productUrl.includes('shopee')) {
+                window.open(productUrl, '_blank');
+            } else {
+                window.open('https://shopee.com.br/', '_blank');
+            }
         }
         
         // Intersection Observer para animações

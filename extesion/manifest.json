@@ -1,0 +1,30 @@
+{
+    "manifest_version": 3,
+    "name": "Shopee Product Scraper",
+    "version": "1.0",
+    "description": "Extrai informações de produtos da Shopee e exporta em JSON",
+    "permissions": [
+      "activeTab",
+      "storage",
+      "downloads"
+    ],
+    "host_permissions": [
+      "https://shopee.com.br/*",
+      "https://*.shopee.com.br/*",
+      "https://*.susercontent.com/*",
+      "https://down-br.img.susercontent.com/*"
+    ],
+    "action": {
+      "default_popup": "popup.html"
+    },
+    "content_scripts": [
+      {
+        "matches": ["https://shopee.com.br/*"],
+        "js": ["content.js"],
+        "run_at": "document_end"
+      }
+    ],
+    "background": {
+      "service_worker": "background.js"
+    }
+  }
