@@ -1,42 +1,71 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
-*/
+/* AIVENDAS Design System - Modern SaaS interface */
 
 @layer base {
   :root {
+    /* Core Brand Colors */
     --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
-
+    --foreground: 215 25% 27%;
+    
+    /* Brand Primary - Modern Blue */
+    --primary: 221 83% 53%;
+    --primary-foreground: 0 0% 98%;
+    --primary-hover: 221 83% 45%;
+    --primary-light: 221 83% 95%;
+    
+    /* Success Green */
+    --success: 142 76% 36%;
+    --success-foreground: 0 0% 98%;
+    --success-light: 142 76% 95%;
+    
+    /* Warning & Error */
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 98%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 98%;
+    
+    /* Neutral Grays */
+    --muted: 215 20% 97%;
+    --muted-foreground: 215 15% 57%;
+    --border: 215 20% 92%;
+    --input: 215 20% 96%;
+    --ring: 221 83% 53%;
+    
+    /* Card & Components */
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
-
+    --card-foreground: 215 25% 27%;
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --popover-foreground: 215 25% 27%;
+    
+    /* Secondary */
+    --secondary: 215 20% 97%;
+    --secondary-foreground: 215 25% 27%;
+    --accent: 215 20% 97%;
+    --accent-foreground: 215 25% 27%;
+    
+    /* Gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(221 83% 53%), hsl(239 84% 67%));
+    --gradient-success: linear-gradient(135deg, hsl(142 76% 36%), hsl(158 64% 52%));
+    --gradient-hero: linear-gradient(135deg, hsl(221 83% 53%), hsl(239 84% 67%), hsl(262 83% 58%));
+    --gradient-card: linear-gradient(145deg, hsl(0 0% 100%), hsl(215 20% 98%));
+    
+    /* Shadows */
+    --shadow-sm: 0 1px 2px 0 hsl(215 25% 27% / 0.05);
+    --shadow-md: 0 4px 6px -1px hsl(215 25% 27% / 0.1), 0 2px 4px -1px hsl(215 25% 27% / 0.06);
+    --shadow-lg: 0 10px 15px -3px hsl(215 25% 27% / 0.1), 0 4px 6px -2px hsl(215 25% 27% / 0.05);
+    --shadow-xl: 0 20px 25px -5px hsl(215 25% 27% / 0.1), 0 10px 10px -5px hsl(215 25% 27% / 0.04);
+    --shadow-2xl: 0 25px 50px -12px hsl(215 25% 27% / 0.25);
+    --shadow-glow: 0 0 40px hsl(221 83% 53% / 0.3);
+    
+    /* Animations */
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-bounce: all 0.2s cubic-bezier(0.68, -0.55, 0.265, 1.55);
 
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
-
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
-
-    --radius: 0.5rem;
+    --radius: 0.75rem;
 
     --sidebar-background: 0 0% 98%;
 
@@ -100,6 +129,77 @@ All colors MUST be HSL.
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-inter antialiased;
+  }
+}
+
+@layer components {
+  /* Button Variants */
+  .btn-primary {
+    @apply bg-gradient-to-r from-primary to-primary hover:from-primary-hover hover:to-primary-hover text-primary-foreground;
+    transition: var(--transition-smooth);
+  }
+  
+  .btn-success {
+    @apply bg-gradient-to-r from-success to-success text-success-foreground;
+    transition: var(--transition-smooth);
+  }
+  
+  .btn-gradient {
+    background: var(--gradient-primary);
+    @apply text-white hover:scale-105 transform;
+    transition: var(--transition-bounce);
+  }
+  
+  /* Card Variants */
+  .card-gradient {
+    background: var(--gradient-card);
+    box-shadow: var(--shadow-lg);
+    @apply backdrop-blur-sm;
+  }
+  
+  .card-hover {
+    @apply hover:shadow-xl hover:-translate-y-1;
+    transition: var(--transition-smooth);
+  }
+  
+  /* Hero Effects */
+  .hero-glow {
+    box-shadow: var(--shadow-glow);
+  }
+  
+  /* Animation Classes */
+  .animate-float {
+    animation: float 3s ease-in-out infinite;
+  }
+  
+  .animate-pulse-slow {
+    animation: pulse 3s ease-in-out infinite;
+  }
+  
+  /* Interactive Elements */
+  .interactive-hover {
+    @apply hover:scale-105 hover:shadow-lg;
+    transition: var(--transition-bounce);
+  }
+  
+  .glass-effect {
+    @apply backdrop-blur-lg bg-white/70 border border-white/20;
+  }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
