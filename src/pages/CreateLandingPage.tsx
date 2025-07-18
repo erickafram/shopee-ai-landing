@@ -23,7 +23,8 @@ import {
   ExternalLink,
   Copy,
   X,
-  Link2
+  Link2,
+  RotateCcw
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useLandingPageGenerator } from "@/hooks/useLandingPageGenerator";
@@ -38,6 +39,16 @@ const CreateLandingPage = () => {
   const [generating, setGenerating] = useState(false);
   const [extractedProduct, setExtractedProduct] = useState<any>(null);
   const [generatedPage, setGeneratedPage] = useState<any>(null);
+  const [selectedImages, setSelectedImages] = useState<number[]>([]);
+  const [editMode, setEditMode] = useState(false);
+  const [editorSettings, setEditorSettings] = useState({
+    primaryColor: '#667eea',
+    ctaText: 'COMPRAR AGORA',
+    layout: 'modern',
+    title: '',
+    subtitle: '',
+    urgencyText: 'OFERTA POR TEMPO LIMITADO!'
+  });
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
@@ -86,6 +97,17 @@ const CreateLandingPage = () => {
       if (result.success) {
         setJsonData(data);
         setExtractedProduct(result.data);
+        // Inicializar todas as imagens como selecionadas por padrão
+        if (result.data?.images) {
+          setSelectedImages(result.data.images.map((_: any, idx: number) => idx));
+        }
+        
+        // Inicializar configurações do editor
+        setEditorSettings(prev => ({
+          ...prev,
+          title: result.data?.name || '',
+          subtitle: 'Produto de alta qualidade com o melhor custo-benefício'
+        }));
         setCurrentStep(2);
         toast({
           title: "Sucesso!",
@@ -105,11 +127,87 @@ const CreateLandingPage = () => {
     }
   };
 
+  // Funções para seleção de imagens
+  const toggleImageSelection = (index: number) => {
+    setSelectedImages(prev => 
+      prev.includes(index) 
+        ? prev.filter(i => i !== index)
+        : [...prev, index]
+    );
+  };
+
+  const selectAllImages = () => {
+    if (extractedProduct?.images) {
+      setSelectedImages(extractedProduct.images.map((_: any, idx: number) => idx));
+    }
+  };
+
+  const clearImageSelection = () => {
+    setSelectedImages([]);
+  };
+
+  // Funções do editor
+  const updateEditorSetting = (key: string, value: any) => {
+    setEditorSettings(prev => ({
+      ...prev,
+      [key]: value
+    }));
+  };
+
+  const applyEditorChanges = async () => {
+    if (!extractedProduct || !generatedPage) return;
+
+    try {
+      // Aplicar as configurações do editor ao HTML gerado
+      let updatedHtml = generatedPage.html;
+      
+      // Substituir cores
+      updatedHtml = updatedHtml.replace(/#667eea/g, editorSettings.primaryColor);
+      
+      // Substituir texto do CTA
+      updatedHtml = updatedHtml.replace(/COMPRAR AGORA/g, editorSettings.ctaText);
+      updatedHtml = updatedHtml.replace(/QUERO MEU SAPATO/g, editorSettings.ctaText);
+      
+      // Substituir título se fornecido
+      if (editorSettings.title) {
+        updatedHtml = updatedHtml.replace(
+          new RegExp(extractedProduct.name, 'g'), 
+          editorSettings.title
+        );
+      }
+
+      setGeneratedPage(prev => ({
+        ...prev,
+        html: updatedHtml
+      }));
+
+      toast({
+        title: "Alterações aplicadas!",
+        description: "Sua landing page foi atualizada com as novas configurações"
+      });
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Não foi possível aplicar as alterações",
+        variant: "destructive"
+      });
+    }
+  };
+
   const handleGeneratePage = async () => {
     if (!extractedProduct) {
       toast({
         title: "Erro",
         description: "Nenhum produto encontrado para gerar a landing page",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (selectedImages.length === 0) {
+      toast({
+        title: "Atenção",
+        description: "Selecione pelo menos uma imagem para a landing page",
         variant: "destructive"
       });
       return;
@@ -134,11 +232,13 @@ const CreateLandingPage = () => {
       });
 
       // Normalizar dados do produto para o formato esperado
+      const selectedImagesData = selectedImages.map(idx => extractedProduct.images[idx]).filter(Boolean);
+      
       const normalizedProduct = {
         name: extractedProduct.name || 'Produto da Shopee',
         price: extractedProduct.price || 'Consulte o preço',
         originalPrice: extractedProduct.originalPrice || '',
-        images: extractedProduct.images || [],
+        images: selectedImagesData,
         description: extractedProduct.description || '',
         specifications: extractedProduct.specifications || {},
         category: extractedProduct.category || 'Produto da Shopee',
@@ -378,17 +478,77 @@ const CreateLandingPage = () => {
                   {/* Images & Specs */}
                   <div className="space-y-4">
                     <div>
-                      <Label>Imagens do Produto</Label>
-                      <div className="grid grid-cols-2 gap-2 mt-2">
-                        {extractedProduct?.images?.map((img, idx) => (
-                          <div key={idx} className="relative">
-                            <img 
-                              src={img} 
-                              alt={`Produto ${idx + 1}`}
-                              className="w-full h-24 object-cover rounded-lg border"
-                            />
-                          </div>
-                        ))}
+                      <div className="flex items-center justify-between mb-3">
+                        <Label>Imagens do Produto</Label>
+                        <div className="flex gap-2">
+                          <Button 
+                            type="button" 
+                            variant="outline" 
+                            size="sm"
+                            onClick={selectAllImages}
+                          >
+                            Selecionar Todas
+                          </Button>
+                          <Button 
+                            type="button" 
+                            variant="outline" 
+                            size="sm"
+                            onClick={clearImageSelection}
+                          >
+                            Limpar Seleção
+                          </Button>
+                        </div>
+                      </div>
+                      
+                      <div className="text-sm text-muted-foreground mb-2">
+                        Selecione as imagens que deseja usar na landing page ({selectedImages.length} selecionadas)
+                      </div>
+                      
+                      <div className="grid grid-cols-3 gap-3 mt-2">
+                        {extractedProduct?.images?.map((img, idx) => {
+                          // Determinar URL da imagem
+                          const imageUrl = typeof img === 'string' ? img : img?.url || img?.local_path;
+                          const proxyUrl = imageUrl ? `http://localhost:5007/api/image-proxy?url=${encodeURIComponent(imageUrl)}` : null;
+                          const isSelected = selectedImages.includes(idx);
+                          
+                          return (
+                            <div 
+                              key={idx} 
+                              className={`relative cursor-pointer rounded-lg border-2 transition-all ${
+                                isSelected 
+                                  ? 'border-primary ring-2 ring-primary/20' 
+                                  : 'border-gray-200 hover:border-gray-300'
+                              }`}
+                              onClick={() => toggleImageSelection(idx)}
+                            >
+                              <img 
+                                src={proxyUrl || imageUrl} 
+                                alt={`Produto ${idx + 1}`}
+                                className="w-full h-24 object-cover rounded-md"
+                                onError={(e) => {
+                                  // Fallback para imagem não carregada
+                                  e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZGRkIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkltYWdlbSBTaG9wZWU8L3RleHQ+PC9zdmc+';
+                                }}
+                              />
+                              
+                              {/* Checkbox overlay */}
+                              <div className={`absolute top-2 right-2 w-5 h-5 rounded border-2 bg-white flex items-center justify-center ${
+                                isSelected ? 'border-primary bg-primary' : 'border-gray-300'
+                              }`}>
+                                {isSelected && (
+                                  <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                  </svg>
+                                )}
+                              </div>
+                              
+                              {/* Image number */}
+                              <div className="absolute bottom-2 left-2 bg-black/70 text-white text-xs px-2 py-1 rounded">
+                                Foto {idx + 1}
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
                     
@@ -578,28 +738,38 @@ const CreateLandingPage = () => {
                             </div>
                           </div>
                           
-                          {/* Galeria de Imagens */}
+                          {/* Galeria de Imagens Selecionadas */}
                           <div className="space-y-4">
-                            <h3 className="text-lg font-semibold">Galeria de Imagens</h3>
+                            <h3 className="text-lg font-semibold">
+                              Galeria de Imagens ({selectedImages.length} selecionadas)
+                            </h3>
                             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                              {extractedProduct?.images?.slice(0, 8).map((img, idx) => (
-                                <div key={idx} className="relative group">
-                                  <img 
-                                    src={typeof img === 'string' ? img : img.url || img.local_path}
-                                    alt={`Produto ${idx + 1}`}
-                                    className="w-full h-32 object-cover rounded-lg border-2 border-gray-200 group-hover:border-blue-400 transition-all duration-200 group-hover:scale-105"
-                                    onError={(e) => {
-                                      // Fallback para imagem não carregada
-                                      e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZGRkIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkltYWdlbSBuw6NvIGRpc3BvbsOtdmVsPC90ZXh0Pjwvc3ZnPg==';
-                                    }}
-                                  />
-                                  <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all duration-200 rounded-lg flex items-center justify-center">
-                                    <span className="text-white opacity-0 group-hover:opacity-100 text-sm font-medium">
-                                      Ver imagem
-                                    </span>
+                              {selectedImages.map((imgIndex) => {
+                                const img = extractedProduct?.images?.[imgIndex];
+                                if (!img) return null;
+                                // Determinar URL da imagem  
+                                const imageUrl = typeof img === 'string' ? img : img?.url || img?.local_path;
+                                const proxyUrl = imageUrl ? `http://localhost:5007/api/image-proxy?url=${encodeURIComponent(imageUrl)}` : null;
+                                
+                                return (
+                                  <div key={imgIndex} className="relative group">
+                                    <img 
+                                      src={proxyUrl || imageUrl}
+                                      alt={`Produto ${imgIndex + 1}`}
+                                      className="w-full h-32 object-cover rounded-lg border-2 border-gray-200 group-hover:border-blue-400 transition-all duration-200 group-hover:scale-105"
+                                      onError={(e) => {
+                                        // Fallback para imagem não carregada
+                                        e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZGRkIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkltYWdlbnMgZGEgU2hvcGVlPC90ZXh0Pjwvc3ZnPg==';
+                                      }}
+                                    />
+                                    <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all duration-200 rounded-lg flex items-center justify-center">
+                                      <span className="text-white opacity-0 group-hover:opacity-100 text-sm font-medium">
+                                        Ver imagem
+                                      </span>
+                                    </div>
                                   </div>
-                                </div>
-                              )) || (
+                                );
+                              }) || (
                                 <div className="col-span-full text-center py-8 text-muted-foreground">
                                   <div className="space-y-2">
                                     <Image className="w-12 h-12 mx-auto opacity-50" />
@@ -679,46 +849,158 @@ const CreateLandingPage = () => {
                 <div className="grid md:grid-cols-4 gap-6">
                   <Card className="md:col-span-1">
                     <CardHeader>
-                      <CardTitle className="text-lg">Personalizar</CardTitle>
+                      <CardTitle className="text-lg">🎨 Personalizar</CardTitle>
+                      <CardDescription>
+                        Customize sua landing page em tempo real
+                      </CardDescription>
                     </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="space-y-2">
-                        <Label>Cores</Label>
-                        <div className="flex space-x-2">
-                          <div className="w-8 h-8 bg-primary rounded border-2 border-primary"></div>
-                          <div className="w-8 h-8 bg-success rounded border"></div>
-                          <div className="w-8 h-8 bg-warning rounded border"></div>
+                    <CardContent className="space-y-6">
+                      {/* Cores da Landing Page */}
+                      <div className="space-y-3">
+                        <Label className="text-sm font-medium">Cor Principal</Label>
+                        <div className="space-y-2">
+                          <div className="flex space-x-2">
+                            {[
+                              { name: 'Azul', color: '#667eea' },
+                              { name: 'Verde', color: '#10b981' },
+                              { name: 'Roxo', color: '#8b5cf6' },
+                              { name: 'Laranja', color: '#f97316' },
+                              { name: 'Rosa', color: '#ec4899' },
+                              { name: 'Vermelho', color: '#ef4444' }
+                            ].map((colorOption) => (
+                              <div
+                                key={colorOption.color}
+                                className={`w-8 h-8 rounded-full border-2 cursor-pointer transition-all ${
+                                  editorSettings.primaryColor === colorOption.color 
+                                    ? 'border-gray-800 scale-110' 
+                                    : 'border-gray-300 hover:scale-105'
+                                }`}
+                                style={{ backgroundColor: colorOption.color }}
+                                onClick={() => updateEditorSetting('primaryColor', colorOption.color)}
+                                title={colorOption.name}
+                              />
+                            ))}
+                          </div>
+                          <Input
+                            type="color"
+                            value={editorSettings.primaryColor}
+                            onChange={(e) => updateEditorSetting('primaryColor', e.target.value)}
+                            className="w-full h-10"
+                          />
                         </div>
                       </div>
                       
-                      <div className="space-y-2">
-                        <Label>Texto do CTA</Label>
-                        <Input placeholder="Comprar Agora" />
+                      {/* Textos */}
+                      <div className="space-y-3">
+                        <Label className="text-sm font-medium">Título Principal</Label>
+                        <Input
+                          value={editorSettings.title}
+                          onChange={(e) => updateEditorSetting('title', e.target.value)}
+                          placeholder={extractedProduct?.name || "Digite o título"}
+                          className="text-sm"
+                        />
                       </div>
                       
-                      <div className="space-y-2">
-                        <Label>Layout</Label>
-                        <div className="grid grid-cols-2 gap-2">
-                          <div className="border rounded p-2 cursor-pointer hover:bg-muted">
-                            <Layout className="h-4 w-4" />
-                          </div>
-                          <div className="border rounded p-2 cursor-pointer hover:bg-muted">
-                            <Image className="h-4 w-4" />
-                          </div>
-                        </div>
+                      <div className="space-y-3">
+                        <Label className="text-sm font-medium">Subtítulo</Label>
+                        <textarea
+                          value={editorSettings.subtitle}
+                          onChange={(e) => updateEditorSetting('subtitle', e.target.value)}
+                          placeholder="Descreva os benefícios do produto"
+                          className="w-full p-2 border rounded-md text-sm min-h-[60px] resize-none"
+                        />
                       </div>
+                      
+                      <div className="space-y-3">
+                        <Label className="text-sm font-medium">Texto do Botão</Label>
+                        <Input
+                          value={editorSettings.ctaText}
+                          onChange={(e) => updateEditorSetting('ctaText', e.target.value)}
+                          placeholder="COMPRAR AGORA"
+                          className="text-sm font-bold"
+                        />
+                      </div>
+                      
+                      <div className="space-y-3">
+                        <Label className="text-sm font-medium">Texto de Urgência</Label>
+                        <Input
+                          value={editorSettings.urgencyText}
+                          onChange={(e) => updateEditorSetting('urgencyText', e.target.value)}
+                          placeholder="OFERTA POR TEMPO LIMITADO!"
+                          className="text-sm"
+                        />
+                      </div>
+                      
+                      {/* Aplicar mudanças */}
+                      <Button 
+                        onClick={applyEditorChanges} 
+                        className="w-full" 
+                        disabled={!generatedPage}
+                        size="sm"
+                      >
+                        <Palette className="mr-2 h-4 w-4" />
+                        Aplicar Alterações
+                      </Button>
+                      
+                      {/* Reset */}
+                      <Button 
+                        variant="outline" 
+                        onClick={() => {
+                          setEditorSettings({
+                            primaryColor: '#667eea',
+                            ctaText: 'COMPRAR AGORA',
+                            layout: 'modern',
+                            title: extractedProduct?.name || '',
+                            subtitle: 'Produto de alta qualidade com o melhor custo-benefício',
+                            urgencyText: 'OFERTA POR TEMPO LIMITADO!'
+                          });
+                        }}
+                        className="w-full"
+                        size="sm"
+                      >
+                        <RotateCcw className="mr-2 h-4 w-4" />
+                        Resetar
+                      </Button>
                     </CardContent>
                   </Card>
                   
                   <Card className="md:col-span-3">
                     <CardHeader>
-                      <CardTitle>Editor Visual</CardTitle>
+                      <CardTitle>🖼️ Preview em Tempo Real</CardTitle>
+                      <CardDescription>
+                        Veja como suas alterações ficam na landing page
+                      </CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <div className="border rounded-lg p-4 min-h-[400px] bg-muted/30">
-                        <p className="text-center text-muted-foreground">
-                          Editor visual será implementado aqui
-                        </p>
+                      <div className="border rounded-lg bg-white min-h-[500px] overflow-hidden">
+                        {generatedPage ? (
+                          <div className="relative">
+                            <iframe
+                              srcDoc={generatedPage.html}
+                              className="w-full h-[500px] border-0"
+                              title="Landing Page Preview"
+                            />
+                            <div className="absolute top-2 right-2 bg-black/70 text-white px-2 py-1 rounded text-xs">
+                              Preview ao vivo
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex items-center justify-center h-[500px] bg-gradient-to-br from-blue-50 to-purple-50">
+                            <div className="text-center space-y-4">
+                              <div className="w-16 h-16 mx-auto bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
+                                <Palette className="w-8 h-8 text-white" />
+                              </div>
+                              <div>
+                                <h3 className="text-lg font-medium text-gray-900">
+                                  Gere sua landing page primeiro
+                                </h3>
+                                <p className="text-gray-500 text-sm">
+                                  Volte para a aba "Preview" e clique em "Gerar Landing Page"
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </CardContent>
                   </Card>

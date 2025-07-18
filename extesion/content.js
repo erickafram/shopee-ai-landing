@@ -273,13 +273,15 @@ async function extractProductData() {
       const images = [];
       const imageUrls = [];
       
-      // Seletores mais específicos para imagens da Shopee
+      // Seletores atualizados para imagens da Shopee
       const imageSelectors = [
         'img[src*="susercontent"]',
-        'img[src*="shopee"]',
-        '[class*="gallery"] img',
+        'div[style*="background-image"][style*="susercontent"]',
         '[class*="product-image"] img',
-        '[class*="image"] img',
+        '[class*="gallery"] img',
+        'img[class*="main"]',
+        'img[class*="thumb"]',
+        'img[src*="shopee"]',
         'img[class*="product"]',
         '[data-testid*="image"] img'
       ];
@@ -330,57 +332,26 @@ async function extractProductData() {
         }
       });
       
-      // Baixar e processar imagens (máximo 10)
+      // Apenas adicionar URLs limpas (SEM download) - SOLUÇÃO SIMPLIFICADA
       const maxImages = Math.min(imageUrls.length, 10);
       console.log(`📸 URLs encontradas: ${imageUrls.length}`);
-      console.log(`📸 Processando ${maxImages} imagens...`);
+      console.log(`✅ Processando apenas URLs (sem download para evitar CORS)`);
       
       if (imageUrls.length === 0) {
         console.warn('⚠️ Nenhuma URL de imagem encontrada!');
         productData.product.images = [];
       } else {
-        console.log('📋 URLs das imagens:', imageUrls.slice(0, 3));
-      }
-      
-      for (let i = 0; i < maxImages; i++) {
-        const imageUrl = imageUrls[i];
-        console.log(`🔄 Baixando imagem ${i + 1}/${maxImages}: ${imageUrl.substring(0, 50)}...`);
+        console.log('📋 Primeiras URLs:', imageUrls.slice(0, 3));
         
-        try {
-          // Solicitar ao background script para baixar a imagem
-          const imageData = await new Promise((resolve, reject) => {
-            chrome.runtime.sendMessage({
-              action: 'downloadImage',
-              imageUrl: imageUrl,
-              filename: `product_${i + 1}.jpg`
-            }, (response) => {
-              console.log(`📥 Resposta para imagem ${i + 1}:`, response?.success ? 'Sucesso' : 'Erro');
-              if (response && response.success) {
-                resolve(response.imageData);
-              } else {
-                reject(new Error(response?.error || 'Erro ao baixar imagem'));
-              }
-            });
+        // Apenas adicionar URLs limpas (SEM download)
+        imageUrls.slice(0, maxImages).forEach((url, index) => {
+          images.push({
+            url: url,
+            filename: `product_${index + 1}.jpg`,
+            position: index + 1
           });
-          
-          if (imageData) {
-            images.push(imageData);
-            console.log(`✅ Imagem ${i + 1} processada:`, imageData.filename);
-          }
-        } catch (error) {
-          console.error(`❌ Erro ao processar imagem ${i + 1}:`, error.message);
-          // Se falhar, usar URL original como fallback
-          const fallbackImage = {
-            url: imageUrl,
-            local_path: `product_${i + 1}.jpg`,
-            filename: `product_${i + 1}.jpg`,
-            base64: null,
-            size: 0,
-            type: 'image/jpeg'
-          };
-          images.push(fallbackImage);
-          console.log(`🔄 Usando fallback para imagem ${i + 1}:`, fallbackImage.url.substring(0, 50) + '...');
-        }
+          console.log(`✅ URL ${index + 1}: ${url.substring(0, 50)}...`);
+        });
       }
       
       productData.product.images = images;

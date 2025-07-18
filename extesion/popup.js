@@ -38,38 +38,55 @@ document.addEventListener('DOMContentLoaded', async () => {
       showLoading();
       extractBtn.disabled = true;
       
-      // Enviar mensagem para o content script
+      // Primeiro, testar se o content script está carregado
+      console.log('🔍 Testando comunicação com content script...');
+      
+      try {
+        // Teste ping primeiro
+        await chrome.tabs.sendMessage(tab.id, { action: 'ping' });
+        console.log('✅ Content script respondeu ao ping');
+      } catch (pingError) {
+        console.log('❌ Content script não responde, tentando injetar...');
+        
+        // Tentar injetar o content script
+        await chrome.scripting.executeScript({
+          target: { tabId: tab.id },
+          files: ['content.js']
+        });
+        
+        // Aguardar um pouco para o script carregar
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        console.log('✅ Content script injetado');
+      }
+      
+      // Agora enviar mensagem para extrair dados
+      console.log('📡 Enviando comando de extração...');
       const response = await chrome.tabs.sendMessage(tab.id, { action: 'extractData' });
       
       hideLoading();
       
-      if (response.success) {
+      if (response && response.success) {
         extractedData = response.data;
         showResult(extractedData);
         downloadBtn.style.display = 'block';
+        console.log('✅ Dados extraídos com sucesso:', extractedData);
       } else {
-        showError('Erro ao extrair dados: ' + response.error);
+        const errorMsg = response ? response.error : 'Resposta inválida do content script';
+        showError('Erro ao extrair dados: ' + errorMsg);
+        console.error('❌ Erro na extração:', errorMsg);
       }
       
     } catch (error) {
       hideLoading();
-      console.error('Erro:', error);
+      console.error('❌ Erro geral:', error);
       
-      // Se o content script não estiver carregado, tentar injetá-lo
-      if (error.message.includes('Could not establish connection')) {
-        try {
-          await chrome.scripting.executeScript({
-            target: { tabId: tab.id },
-            files: ['content.js']
-          });
-          
-          // Tentar novamente
-          extractBtn.click();
-        } catch (injectError) {
-          showError('Erro ao carregar script. Recarregue a página e tente novamente.');
-        }
+      if (error.message.includes('Could not establish connection') || 
+          error.message.includes('receiving end does not exist')) {
+        showError('❌ Content script não carregado. Recarregue a página da Shopee e tente novamente.');
+      } else if (error.message.includes('scripting')) {
+        showError('❌ Erro de permissão. Recarregue a extensão em chrome://extensions/');
       } else {
-        showError('Erro: ' + error.message);
+        showError('❌ Erro inesperado: ' + error.message);
       }
     } finally {
       extractBtn.disabled = false;

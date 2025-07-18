@@ -7,7 +7,7 @@
 ✅ Processamento de imagens e dados estruturados
 """
 
-from flask import Flask, request, jsonify, render_template_string
+from flask import Flask, request, jsonify, render_template_string, Response
 from flask_cors import CORS
 import json
 import base64
@@ -629,6 +629,67 @@ def list_products():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+# 🖼️ PROXY DE IMAGENS - Contornar CORS da Shopee
+@app.route('/api/image-proxy', methods=['GET'])
+def image_proxy():
+    """Proxy para servir imagens da Shopee contornando CORS"""
+    try:
+        # Obter URL da imagem dos parâmetros
+        image_url = request.args.get('url')
+        if not image_url:
+            return jsonify({"error": "URL da imagem não fornecida"}), 400
+        
+        # Verificar se é uma URL da Shopee válida
+        if 'susercontent.com' not in image_url and 'shopee.com' not in image_url:
+            return jsonify({"error": "URL não permitida"}), 403
+        
+        print(f"🖼️ Proxy de imagem: {image_url[:50]}...")
+        
+        # Headers para simular navegador real
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+            'Accept': 'image/webp,image/apng,image/*,*/*;q=0.8',
+            'Accept-Language': 'pt-BR,pt;q=0.9,en;q=0.8',
+            'Accept-Encoding': 'gzip, deflate, br',
+            'Referer': 'https://shopee.com.br/',
+            'Sec-Fetch-Dest': 'image',
+            'Sec-Fetch-Mode': 'no-cors',
+            'Sec-Fetch-Site': 'cross-site'
+        }
+        
+        # Fazer request da imagem
+        response = requests.get(image_url, headers=headers, timeout=10)
+        
+        if response.status_code == 200:
+            # Determinar tipo de conteúdo
+            content_type = response.headers.get('content-type', 'image/jpeg')
+            
+            # Retornar imagem com headers corretos
+            return Response(
+                response.content,
+                mimetype=content_type,
+                headers={
+                    'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Methods': 'GET',
+                    'Cache-Control': 'public, max-age=3600'  # Cache por 1 hora
+                }
+            )
+        else:
+            print(f"❌ Erro ao buscar imagem: HTTP {response.status_code}")
+            return jsonify({"error": f"Erro ao buscar imagem: HTTP {response.status_code}"}), response.status_code
+            
+    except requests.exceptions.Timeout:
+        print("⏰ Timeout ao buscar imagem")
+        return jsonify({"error": "Timeout ao buscar imagem"}), 408
+        
+    except requests.exceptions.RequestException as e:
+        print(f"❌ Erro de rede: {e}")
+        return jsonify({"error": f"Erro de rede: {str(e)}"}), 500
+        
+    except Exception as e:
+        print(f"❌ Erro inesperado no proxy: {e}")
+        return jsonify({"error": f"Erro interno: {str(e)}"}), 500
+
 if __name__ == '__main__':
     print("🎯 JSON LANDING PAGE GENERATOR")
     print("=" * 50)
@@ -640,6 +701,7 @@ if __name__ == '__main__':
     print("   POST /api/upload-json - Upload de dados")
     print("   GET /api/product/<id> - Obter produto")
     print("   GET /api/products - Listar produtos")
+    print("   GET /api/image-proxy?url=<url> - Proxy de imagens")
     print("=" * 50)
     
     app.run(host='0.0.0.0', port=5007, debug=False)

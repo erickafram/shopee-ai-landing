@@ -479,46 +479,5 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     sendResponse({ success: true, version: 'advanced' });
   }
   
-  // Baixar e processar imagens
-  if (request.action === 'downloadImage') {
-    const { imageUrl, filename } = request;
-    
-    fetch(imageUrl)
-      .then(response => {
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-        }
-        return response.blob();
-      })
-      .then(blob => {
-        return new Promise((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = () => {
-            const base64 = reader.result.split(',')[1]; // Remove o prefixo "data:image/...;base64,"
-            
-            const imageData = {
-              url: imageUrl,
-              local_path: `product_images/${filename}`,
-              filename: filename,
-              base64: base64,
-              size: blob.size,
-              type: blob.type || 'image/jpeg'
-            };
-            
-            resolve(imageData);
-          };
-          reader.onerror = () => reject(new Error('Erro ao ler imagem'));
-          reader.readAsDataURL(blob);
-        });
-      })
-      .then(imageData => {
-        sendResponse({ success: true, imageData: imageData });
-      })
-      .catch(error => {
-        console.error('Erro ao baixar imagem:', error);
-        sendResponse({ success: false, error: error.message });
-      });
-    
-    return true; // Indica resposta assíncrona
-  }
+  // Função downloadImage removida - Apenas URLs são coletadas para evitar problemas de CORS
 });

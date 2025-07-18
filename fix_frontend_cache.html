@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔄 Limpar Cache do Dashboard</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #ff6b35;
+            text-align: center;
+        }
+        .success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        .warning {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        button {
+            background: #ff6b35;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+        }
+        button:hover {
+            background: #e55a2b;
+        }
+        .test-results {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 15px 0;
+            font-family: monospace;
+            font-size: 14px;
+        }
+        .image-test {
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 15px 0;
+            text-align: center;
+        }
+        .image-test img {
+            max-width: 200px;
+            max-height: 150px;
+            border-radius: 5px;
+            margin: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔄 Corrigir Cache do Dashboard</h1>
+        
+        <div class="success">
+            <h3>✅ Servidor com Proxy Funcionando!</h3>
+            <p>O teste confirmou que o proxy de imagens está ativo e funcionando corretamente. As imagens devem aparecer agora.</p>
+        </div>
+
+        <div class="warning">
+            <h3>⚠️ Se as imagens ainda não aparecem:</h3>
+            <p>O problema pode ser cache do navegador. Use as soluções abaixo:</p>
+        </div>
+
+        <div class="test-results">
+            <h4>🧪 Teste em Tempo Real</h4>
+            <button onclick="testProxy()">🔄 Testar Proxy Agora</button>
+            <button onclick="clearCacheAndReload()">🗑️ Limpar Cache</button>
+            <button onclick="openDashboard()">🌐 Abrir Dashboard</button>
+            
+            <div id="test-output"></div>
+        </div>
+
+        <div class="image-test">
+            <h4>🖼️ Teste Visual de Imagens</h4>
+            <p>Esta imagem vem diretamente da Shopee via proxy:</p>
+            <button onclick="loadTestImage()">📸 Carregar Imagem Teste</button>
+            <div id="image-container"></div>
+        </div>
+
+        <div style="background: #e3f2fd; padding: 15px; border-radius: 5px; margin: 20px 0;">
+            <h4>📋 Soluções por Ordem de Prioridade:</h4>
+            <ol>
+                <li><strong>Hard Refresh:</strong> Ctrl + F5 na página do dashboard</li>
+                <li><strong>Nova Aba:</strong> Abra uma nova aba para o dashboard</li>
+                <li><strong>Cache do Navegador:</strong> F12 > Application > Storage > Clear storage</li>
+                <li><strong>Modo Incógnito:</strong> Teste no modo privado do navegador</li>
+                <li><strong>Outro Navegador:</strong> Teste no Chrome/Firefox/Edge</li>
+            </ol>
+        </div>
+
+        <div style="background: #f0f9ff; padding: 15px; border-radius: 5px; margin: 20px 0;">
+            <h4>🎯 Resultado Esperado no Dashboard:</h4>
+            <ul>
+                <li>✅ Seção "Imagens do Produto" com miniaturas visíveis</li>
+                <li>✅ Preview da landing page com galeria de imagens</li>
+                <li>✅ Sem placeholders "Imagem Shopee"</li>
+                <li>✅ Console sem erros de CORS</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        async function testProxy() {
+            const output = document.getElementById('test-output');
+            output.innerHTML = '<p>🔄 Testando proxy...</p>';
+            
+            try {
+                // Testar servidor
+                const serverResponse = await fetch('http://localhost:5007/api/products');
+                
+                // Testar proxy com imagem real
+                const testUrl = "https://down-br.img.susercontent.com/file/br-11134207-7r98o-m9gk7onrgxky9e";
+                const proxyUrl = `http://localhost:5007/api/image-proxy?url=${encodeURIComponent(testUrl)}`;
+                const proxyResponse = await fetch(proxyUrl);
+                
+                if (serverResponse.ok && proxyResponse.ok) {
+                    const size = proxyResponse.headers.get('content-length') || 'unknown';
+                    const cors = proxyResponse.headers.get('Access-Control-Allow-Origin');
+                    
+                    output.innerHTML = `
+                        <p>✅ <strong>Servidor:</strong> HTTP ${serverResponse.status}</p>
+                        <p>✅ <strong>Proxy:</strong> HTTP ${proxyResponse.status} (${size} bytes)</p>
+                        <p>✅ <strong>CORS:</strong> ${cors}</p>
+                        <p>🎉 <strong>Tudo funcionando!</strong> Recarregue o dashboard.</p>
+                    `;
+                } else {
+                    output.innerHTML = `
+                        <p>❌ Servidor: HTTP ${serverResponse.status}</p>
+                        <p>❌ Proxy: HTTP ${proxyResponse.status}</p>
+                        <p>⚠️ Há problemas no servidor.</p>
+                    `;
+                }
+            } catch (error) {
+                output.innerHTML = `<p>❌ Erro: ${error.message}</p>`;
+            }
+        }
+
+        function clearCacheAndReload() {
+            // Limpar localStorage
+            localStorage.clear();
+            sessionStorage.clear();
+            
+            // Forçar recarregamento
+            if ('caches' in window) {
+                caches.keys().then(function(names) {
+                    for (let name of names) {
+                        caches.delete(name);
+                    }
+                });
+            }
+            
+            alert('Cache limpo! Abra uma nova aba para o dashboard.');
+        }
+
+        function openDashboard() {
+            const url = 'http://localhost:8081/dashboard/create';
+            const newWindow = window.open(url, '_blank');
+            
+            if (newWindow) {
+                alert('Dashboard aberto em nova aba!');
+            } else {
+                alert(`Abra manualmente: ${url}`);
+            }
+        }
+
+        async function loadTestImage() {
+            const container = document.getElementById('image-container');
+            container.innerHTML = '<p>🔄 Carregando imagem teste...</p>';
+            
+            const testUrl = "https://down-br.img.susercontent.com/file/br-11134207-7r98o-m9gk7onrgxky9e";
+            const proxyUrl = `http://localhost:5007/api/image-proxy?url=${encodeURIComponent(testUrl)}`;
+            
+            const img = document.createElement('img');
+            
+            img.onload = function() {
+                container.innerHTML = '';
+                container.appendChild(img);
+                const success = document.createElement('p');
+                success.innerHTML = '✅ <strong>Imagem carregada via proxy!</strong> O sistema está funcionando.';
+                success.style.color = 'green';
+                container.appendChild(success);
+            };
+            
+            img.onerror = function() {
+                container.innerHTML = '<p style="color: red;">❌ Falha ao carregar imagem. Verifique se o servidor está rodando.</p>';
+            };
+            
+            img.src = proxyUrl;
+            img.alt = "Teste de imagem da Shopee via proxy";
+        }
+
+        // Auto-teste ao carregar
+        window.addEventListener('load', () => {
+            setTimeout(testProxy, 1000);
+        });
+    </script>
+</body>
+</html> 

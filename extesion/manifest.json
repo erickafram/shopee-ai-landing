@@ -6,12 +6,14 @@
     "permissions": [
       "activeTab",
       "storage",
-      "downloads"
+      "downloads",
+      "scripting"
     ],
     "host_permissions": [
       "https://shopee.com.br/*",
       "https://*.shopee.com.br/*",
       "https://*.susercontent.com/*",
+      "https://cf.shopee.com.br/*",
       "https://down-br.img.susercontent.com/*"
     ],
     "action": {
