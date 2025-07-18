@@ -690,6 +690,77 @@ def image_proxy():
         print(f"❌ Erro inesperado no proxy: {e}")
         return jsonify({"error": f"Erro interno: {str(e)}"}), 500
 
+@app.route('/api/landing-page/<product_id>', methods=['POST'])
+def save_landing_page(product_id):
+    """Salvar HTML da landing page gerada"""
+    try:
+        data = request.get_json()
+        html_content = data.get('html')
+        
+        if not html_content:
+            return jsonify({"error": "HTML content é obrigatório"}), 400
+        
+        # Verificar se o produto existe
+        product_file = os.path.join(generator.uploads_dir, f"{product_id}.json")
+        if not os.path.exists(product_file):
+            return jsonify({"error": "Produto não encontrado"}), 404
+        
+        # Salvar o HTML da landing page
+        html_file = os.path.join(generator.generated_dir, f"{product_id}.html")
+        with open(html_file, 'w', encoding='utf-8') as f:
+            f.write(html_content)
+        
+        # URL para acessar a landing page
+        landing_url = f"http://localhost:5007/landing/{product_id}"
+        
+        return jsonify({
+            "success": True,
+            "landing_url": landing_url,
+            "message": "Landing page salva com sucesso"
+        })
+        
+    except Exception as e:
+        logger.error(f"❌ Erro ao salvar landing page: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/landing/<product_id>')
+def view_landing_page(product_id):
+    """Servir a landing page gerada em página completa"""
+    try:
+        html_file = os.path.join(generator.generated_dir, f"{product_id}.html")
+        
+        if not os.path.exists(html_file):
+            return """
+            <html>
+                <head>
+                    <title>Landing Page não encontrada</title>
+                    <style>
+                        body { font-family: Arial, sans-serif; text-align: center; padding: 50px; }
+                        .error { color: #e74c3c; font-size: 24px; margin-bottom: 20px; }
+                        .message { color: #666; font-size: 16px; }
+                    </style>
+                </head>
+                <body>
+                    <div class="error">❌ Landing Page não encontrada</div>
+                    <div class="message">
+                        A landing page solicitada não foi encontrada ou ainda não foi gerada.
+                        <br><br>
+                        <a href="javascript:history.back()">← Voltar</a>
+                    </div>
+                </body>
+            </html>
+            """, 404
+        
+        # Ler e servir o arquivo HTML
+        with open(html_file, 'r', encoding='utf-8') as f:
+            html_content = f.read()
+        
+        return html_content, 200, {'Content-Type': 'text/html; charset=utf-8'}
+        
+    except Exception as e:
+        logger.error(f"❌ Erro ao servir landing page: {e}")
+        return f"<h1>Erro interno do servidor</h1><p>{str(e)}</p>", 500
+
 if __name__ == '__main__':
     print("🎯 JSON LANDING PAGE GENERATOR")
     print("=" * 50)
@@ -702,6 +773,8 @@ if __name__ == '__main__':
     print("   GET /api/product/<id> - Obter produto")
     print("   GET /api/products - Listar produtos")
     print("   GET /api/image-proxy?url=<url> - Proxy de imagens")
+    print("   POST /api/landing-page/<id> - Salvar landing page")
+    print("   GET /landing/<id> - Visualizar landing page completa")
     print("=" * 50)
     
     app.run(host='0.0.0.0', port=5007, debug=False)

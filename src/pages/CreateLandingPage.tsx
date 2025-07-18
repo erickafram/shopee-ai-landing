@@ -146,6 +146,101 @@ const CreateLandingPage = () => {
     setSelectedImages([]);
   };
 
+  // Função para visualizar em página completa
+  const openFullPagePreview = async () => {
+    if (!generatedPage?.html) {
+      toast({
+        title: "Erro",
+        description: "Nenhuma landing page foi gerada ainda",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (!jsonData?.extractedAt) {
+      // Fallback para método direto se não tiver ID do produto
+      const newWindow = window.open('', '_blank');
+      if (newWindow) {
+        newWindow.document.write(generatedPage.html);
+        newWindow.document.close();
+        newWindow.document.title = `Landing Page - ${extractedProduct?.name || 'Produto'}`;
+        
+        toast({
+          title: "Página aberta!",
+          description: "Landing page aberta em nova aba para visualização completa"
+        });
+      }
+      return;
+    }
+
+    try {
+      // Salvar landing page no backend e obter URL dedicada
+      const response = await fetch(`http://localhost:5007/api/landing-page/${getProductId()}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          html: generatedPage.html
+        })
+      });
+
+      const result = await response.json();
+      
+      if (result.success) {
+        // Salvar URL para uso posterior
+        setLandingPageUrl(result.landing_url);
+        
+        // Abrir URL dedicada da landing page
+        window.open(result.landing_url, '_blank');
+        
+        toast({
+          title: "✅ Página aberta!",
+          description: "Landing page disponível em URL dedicada"
+        });
+      } else {
+        throw new Error(result.error || 'Erro ao salvar landing page');
+      }
+    } catch (error) {
+      console.error('Erro ao abrir página completa:', error);
+      
+      // Fallback para método direto
+      const newWindow = window.open('', '_blank');
+      if (newWindow) {
+        newWindow.document.write(generatedPage.html);
+        newWindow.document.close();
+        newWindow.document.title = `Landing Page - ${extractedProduct?.name || 'Produto'}`;
+        
+        toast({
+          title: "Página aberta!",
+          description: "Landing page aberta em nova aba (método alternativo)"
+        });
+      } else {
+        toast({
+          title: "Erro",
+          description: "Não foi possível abrir nova aba. Verifique se popups estão bloqueados.",
+          variant: "destructive"
+        });
+      }
+    }
+  };
+
+  // Estado para armazenar ID do produto atual
+  const [currentProductId, setCurrentProductId] = useState<string | null>(null);
+  const [landingPageUrl, setLandingPageUrl] = useState<string | null>(null);
+
+  // Função auxiliar para obter ID do produto
+  const getProductId = () => {
+    if (currentProductId) return currentProductId;
+    
+    // Gerar ID único baseado no produto
+    const productName = extractedProduct?.name || 'produto';
+    const timestamp = Date.now();
+    const id = `${productName.toLowerCase().replace(/[^a-z0-9]/g, '').substring(0, 10)}_${timestamp}`;
+    setCurrentProductId(id);
+    return id;
+  };
+
   // Funções do editor
   const updateEditorSetting = (key: string, value: any) => {
     setEditorSettings(prev => ({
@@ -661,6 +756,29 @@ const CreateLandingPage = () => {
                 </TabsList>
                 
                 <div className="flex space-x-2">
+                  <Button 
+                    variant="outline" 
+                    onClick={openFullPagePreview} 
+                    disabled={!generatedPage}
+                  >
+                    <ExternalLink className="mr-2 h-4 w-4" />
+                    Visualizar Página Completa
+                  </Button>
+                  {landingPageUrl && (
+                    <Button 
+                      variant="outline" 
+                      onClick={() => {
+                        navigator.clipboard.writeText(landingPageUrl);
+                        toast({
+                          title: "Link copiado!",
+                          description: "URL da landing page copiada para o clipboard"
+                        });
+                      }}
+                    >
+                      <Copy className="mr-2 h-4 w-4" />
+                      Copiar Link
+                    </Button>
+                  )}
                   <Button variant="outline" onClick={handleSave} disabled={!generatedPage}>
                     <Save className="mr-2 h-4 w-4" />
                     Salvar
@@ -682,6 +800,15 @@ const CreateLandingPage = () => {
                           Visualize como sua landing page ficará para os visitantes
                         </CardDescription>
                       </div>
+                      
+                      {landingPageUrl && (
+                        <div className="flex items-center space-x-2">
+                          <Badge variant="secondary" className="bg-green-100 text-green-800">
+                            <CheckCircle className="h-3 w-3 mr-1" />
+                            Disponível em URL
+                          </Badge>
+                        </div>
+                      )}
                       {publishedUrl && (
                         <div className="flex items-center space-x-2">
                           <Badge variant="secondary" className="bg-green-100 text-green-800">
@@ -711,11 +838,24 @@ const CreateLandingPage = () => {
                   <CardContent>
                     <div className="border rounded-lg bg-gradient-to-b from-background to-muted/30 min-h-[500px]">
                       {generatedPage ? (
-                        <iframe
-                          srcDoc={generatedPage.html}
-                          className="w-full h-[600px] border-0 rounded-lg"
-                          title="Landing Page Preview"
-                        />
+                        <div className="relative">
+                          <div className="absolute top-2 right-2 z-10">
+                            <Button
+                              size="sm"
+                              variant="secondary"
+                              onClick={openFullPagePreview}
+                              className="shadow-md"
+                            >
+                              <ExternalLink className="h-3 w-3 mr-1" />
+                              Tela Cheia
+                            </Button>
+                          </div>
+                          <iframe
+                            srcDoc={generatedPage.html}
+                            className="w-full h-[600px] border-0 rounded-lg"
+                            title="Landing Page Preview"
+                          />
+                        </div>
                       ) : (
                         <div className="p-8 text-center space-y-8 bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-950/20 dark:to-purple-950/20 rounded-lg">
                           {/* Header da Landing Page */}
