@@ -12,11 +12,23 @@ export interface ShopeeProduct {
   rating?: number;
   reviews?: number;
   url: string;
+  stockQuantity?: string;
   variations?: {
     colors?: string[];
     sizes?: string[];
     [key: string]: string[] | undefined;
   };
+  comments?: Array<{
+    user: string;
+    comment: string;
+    rating: number;
+    date: string;
+    variation: string;
+    images?: Array<{
+      url: string;
+      alt: string;
+    }>;
+  }>;
 }
 
 class ShopeeExtractor {

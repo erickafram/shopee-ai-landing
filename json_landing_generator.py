@@ -79,6 +79,7 @@ class JSONLandingGenerator:
                 "model": validated_data.get('model', ''),
                 "colors": validated_data.get('colors', []),
                 "sizes": validated_data.get('sizes', []),
+                "comments": self._process_comments(validated_data),
                 "timestamp": time.time()
             }
             
@@ -226,6 +227,9 @@ class JSONLandingGenerator:
             # Especificações
             specifications = product.get('specifications', {})
             
+            # Quantidade em estoque
+            stock_quantity = product.get('stockQuantity', '')
+            
             # Processar cores e tamanhos das variações
             colors = []
             sizes = []
@@ -247,7 +251,8 @@ class JSONLandingGenerator:
                 'rating': rating,
                 'totalRatings': total_ratings,
                 'sold': sold,
-                'stock': 1000,  # Valor padrão
+                'stock': int(stock_quantity) if stock_quantity and stock_quantity.isdigit() else 1000,  # Converte stock_quantity ou usa valor padrão
+                'stockQuantity': stock_quantity,  # Novo campo
                 'description': description,
                 'category': 'Produto da Shopee',
                 'variations': self._normalize_variations(variations),
@@ -261,7 +266,7 @@ class JSONLandingGenerator:
                 'model': '',
                 'colors': colors,
                 'sizes': sizes,
-                'comments': comments,
+                'comments': self._process_comments({'comments': comments}),
                 'url': data.get('url', ''),
                 'extractedAt': data.get('extractedAt', '')
             }
@@ -555,6 +560,74 @@ class JSONLandingGenerator:
         
         return None
     
+    def _process_comments(self, validated_data: Dict) -> List[Dict]:
+        """Processar comentários extraídos da Shopee"""
+        try:
+            # Extrair comentários do JSON da extensão
+            comments = validated_data.get('comments', [])
+            
+            if not comments or not isinstance(comments, list):
+                logger.info("⚠️ Nenhum comentário encontrado no JSON")
+                return []
+            
+            processed_comments = []
+            
+            # Processar apenas os primeiros 5 comentários
+            for comment in comments[:5]:
+                if isinstance(comment, dict):
+                    # Processar imagens do comentário
+                    comment_images = []
+                    if 'images' in comment and isinstance(comment['images'], list):
+                        for img_data in comment['images']:
+                            if img_data:
+                                # Se for string (URL direta)
+                                if isinstance(img_data, str):
+                                    # Evitar duplo proxy e usar URL completa do servidor Python
+                                    if not img_data.startswith('/proxy-image') and not img_data.startswith('http://localhost:5007'):
+                                        proxy_url = f"http://localhost:5007/proxy-image?url={img_data}"
+                                    else:
+                                        proxy_url = img_data
+                                    comment_images.append({
+                                        'url': proxy_url,
+                                        'alt': 'Imagem do comentário'
+                                    })
+                                # Se for objeto com url e alt
+                                elif isinstance(img_data, dict) and 'url' in img_data:
+                                    # Evitar duplo proxy e usar URL completa do servidor Python
+                                    original_url = img_data['url']
+                                    if not original_url.startswith('/proxy-image') and not original_url.startswith('http://localhost:5007'):
+                                        proxy_url = f"http://localhost:5007/proxy-image?url={original_url}"
+                                    else:
+                                        proxy_url = original_url
+                                    comment_images.append({
+                                        'url': proxy_url,
+                                        'alt': img_data.get('alt', 'Imagem do comentário')
+                                    })
+                    
+                    logger.info(f"🖼️ DEBUG Backend - Usuário {comment.get('user', 'Anônimo')}: {len(comment_images)} imagens processadas")
+                    if comment_images:
+                        logger.info(f"URLs das imagens: {[img['url'][:80] + '...' if len(img['url']) > 80 else img['url'] for img in comment_images]}")
+                    
+                    processed_comment = {
+                        'user': comment.get('user', 'Usuário Anônimo'),
+                        'comment': comment.get('comment', ''),
+                        'rating': comment.get('rating', 5),
+                        'date': comment.get('date', ''),
+                        'variation': comment.get('variation', ''),
+                        'images': comment_images  # Agora é uma lista de objetos {url, alt}
+                    }
+                    
+                    processed_comments.append(processed_comment)
+            
+            logger.info(f"✅ Processados {len(processed_comments)} comentários com imagens")
+            for i, comment in enumerate(processed_comments):
+                logger.info(f"Comentário {i+1} - {comment['user']}: {len(comment['images'])} imagens")
+            return processed_comments
+            
+        except Exception as e:
+            logger.error(f"❌ Erro ao processar comentários: {e}")
+            return []
+    
     def list_products(self) -> List[Dict]:
         """Listar todos os produtos"""
         products = []
@@ -631,6 +704,7 @@ def list_products():
 
 # 🖼️ PROXY DE IMAGENS - Contornar CORS da Shopee
 @app.route('/api/image-proxy', methods=['GET'])
+@app.route('/proxy-image', methods=['GET'])  # Rota adicional para compatibilidade
 def image_proxy():
     """Proxy para servir imagens da Shopee contornando CORS"""
     try:

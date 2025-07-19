@@ -442,17 +442,23 @@ async function extractProductData() {
          }
        }
        
-       // Buscar especificamente os tamanhos do produto (37 ao 44)
+       // Buscar especificamente os tamanhos do produto (37 ao 44) e tamanho único
        if (foundSizes.length === 0) {
-         const specificSizes = ['37', '38', '39', '40', '41', '42', '43', '44'];
+         const specificSizes = ['37', '38', '39', '40', '41', '42', '43', '44', 'Único', 'ÚNICO', 'único'];
          for (const size of specificSizes) {
            const sizeExists = Array.from(document.querySelectorAll('*')).some(el => 
              el.textContent?.trim() === size && 
              !el.textContent?.includes('R$') &&
-             !el.textContent?.includes('quantidade')
+             !el.textContent?.includes('quantidade') &&
+             !el.textContent?.includes('vendido')
            );
            if (sizeExists) {
-             foundSizes.push(size);
+             // Normalizar "Único"
+             if (['Único', 'ÚNICO', 'único'].includes(size)) {
+               foundSizes.push('Único');
+             } else {
+               foundSizes.push(size);
+             }
            }
          }
        }
@@ -500,26 +506,82 @@ async function extractProductData() {
     try {
       const specs = {};
       
-      // Buscar informações de estoque
+      // Buscar informações de estoque e quantidade disponível
       const allElements = document.querySelectorAll('*');
+      let stockQuantity = '';
+      
       for (const el of allElements) {
         const text = el.textContent || '';
         
-        // Buscar quantidade disponível
-        if (text.includes('quantidades disponíveis') || text.includes('quantidade disponível')) {
-          const stockMatch = text.match(/(\d+)\s*quantidades? disponíveis?/);
+        // Buscar diferentes padrões de quantidade disponível
+        if (text.includes('peças disponíveis') || text.includes('peça disponível')) {
+          const stockMatch = text.match(/(\d+)\s*peças?\s*disponíveis?/i);
           if (stockMatch) {
+            stockQuantity = stockMatch[1];
             specs['Estoque'] = stockMatch[1];
-            console.log('Estoque encontrado:', stockMatch[1]);
+            console.log('Estoque encontrado (peças):', stockMatch[1]);
+            break;
           }
         }
         
+        if (text.includes('quantidades disponíveis') || text.includes('quantidade disponível')) {
+          const stockMatch = text.match(/(\d+)\s*quantidades?\s*disponíveis?/i);
+          if (stockMatch) {
+            stockQuantity = stockMatch[1];
+            specs['Estoque'] = stockMatch[1];
+            console.log('Estoque encontrado (quantidades):', stockMatch[1]);
+            break;
+          }
+        }
+        
+        // Buscar padrão "Quantidade: X"
+        if (text.includes('Quantidade:') || text.includes('quantidade:')) {
+          const qtyMatch = text.match(/quantidade:\s*(\d+)/i);
+          if (qtyMatch) {
+            stockQuantity = qtyMatch[1];
+            specs['Quantidade'] = qtyMatch[1];
+            console.log('Quantidade encontrada:', qtyMatch[1]);
+          }
+        }
+        
+        // Buscar padrão "X em estoque"
+        if (text.includes('em estoque')) {
+          const stockMatch = text.match(/(\d+)\s*em\s*estoque/i);
+          if (stockMatch) {
+            stockQuantity = stockMatch[1];
+            specs['Estoque'] = stockMatch[1];
+            console.log('Estoque encontrado (em estoque):', stockMatch[1]);
+            break;
+          }
+        }
+        
+        // Buscar padrão "X disponível(eis)"
+        if (text.includes('disponível') || text.includes('disponíveis')) {
+          const stockMatch = text.match(/(\d+)\s*disponíveis?/i);
+          if (stockMatch && !text.includes('vendido') && text.length < 50) {
+            stockQuantity = stockMatch[1];
+            specs['Estoque'] = stockMatch[1];
+            console.log('Estoque encontrado (disponível):', stockMatch[1]);
+            break;
+          }
+        }
+      }
+      
+      // Adicionar quantidade ao objeto principal se encontrou
+      if (stockQuantity) {
+        productData.product.stockQuantity = stockQuantity;
+      }
+      
+      // Buscar outras especificações em um segundo loop
+      for (const el of allElements) {
+        const text = el.textContent || '';
+        
         // Buscar outras especificações comuns
         if (text.includes('Material:') || text.includes('Cor:') || text.includes('Tamanho:')) {
-        const parts = text.split(':');
-        if (parts.length === 2) {
-          specs[parts[0].trim()] = parts[1].trim();
-        }
+          const parts = text.split(':');
+          if (parts.length === 2) {
+            specs[parts[0].trim()] = parts[1].trim();
+          }
         }
         
         // Buscar categoria
@@ -583,76 +645,194 @@ async function extractProductData() {
       console.error('Erro ao extrair info da loja:', e);
     }
 
-    // Comentários (primeiros 5)
+    // Comentários (primeiros 5) - EXTRAÇÃO MELHORADA
     try {
       const comments = [];
+      console.log('🔍 Iniciando extração de comentários da Shopee...');
       
-      // Buscar elementos que contêm avaliações da Shopee
-      const reviewElements = document.querySelectorAll([
+      // ESTRATÉGIA 1: Seletores específicos da Shopee (mais atualizados)
+      const shopeeReviewSelectors = [
+        // Seletores mais específicos da Shopee 2024/2025
+        'div[data-sqe="review"]',
+        'div[class*="shopee-product-rating"]',
+        'div[class*="product-rating"]', 
+        'div[class*="review-item"]',
+        'div[class*="comment-item"]',
+        '.shopee-product-comment-list > div',
+        '[class*="rating-section"] > div',
+        // Seletores genéricos como fallback
         '[class*="review"]',
         '[class*="comment"]',
-        '[data-testid*="review"]',
-        '[role="listitem"]'
-      ].join(', '));
+        '[data-testid*="review"]'
+      ];
       
-      for (const reviewEl of reviewElements) {
+      console.log('🎯 Tentando seletores específicos da Shopee...');
+      let reviewElements = [];
+      
+      for (const selector of shopeeReviewSelectors) {
+        const elements = document.querySelectorAll(selector);
+        if (elements.length > 0) {
+          console.log(`✅ Encontrados ${elements.length} elementos com seletor: ${selector}`);
+          reviewElements.push(...elements);
+        }
+      }
+      
+      // ESTRATÉGIA 2: Busca por texto específico da Shopee (padrões conhecidos)
+      console.log('🔍 Buscando por padrões de texto da Shopee...');
+      const allDivs = document.querySelectorAll('div');
+      const potentialReviews = [];
+      
+      for (const div of allDivs) {
+        const text = div.textContent?.trim() || '';
+        
+        // Padrões mais específicos da Shopee brasileira
+        const shopeePatterns = [
+          // Username + data + hora (formato brasileiro)
+          /[a-zA-Z][a-zA-Z0-9_*]{2,15}\s+\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}/,
+          // Username + data simples
+          /[a-zA-Z][a-zA-Z0-9_*]{2,15}\s+\d{4}-\d{2}-\d{2}/,
+          // Texto com "Variação:" (específico da Shopee)
+          /Variação:\s*[^\n]+/,
+          // Padrão de avaliação com estrelas
+          /⭐{1,5}.*[a-zA-Z]{10,}/
+        ];
+        
+        const hasShopeePattern = shopeePatterns.some(pattern => pattern.test(text));
+        
+        if (hasShopeePattern && text.length > 30 && text.length < 2000) {
+          console.log('📝 Padrão Shopee encontrado:', text.substring(0, 100) + '...');
+          potentialReviews.push(div);
+        }
+      }
+      
+      const allReviewElements = [...new Set([...reviewElements, ...potentialReviews])];
+      console.log(`🎯 Total de elementos para análise: ${allReviewElements.length}`);
+      
+      // PROCESSAR CADA ELEMENTO ENCONTRADO
+      for (const reviewEl of allReviewElements) {
         if (comments.length >= 5) break;
         
         const text = reviewEl.textContent?.trim() || '';
         
-        // Filtrar elementos muito grandes (interface) ou muito pequenos
-        if (text.length < 10 || text.length > 1000) continue;
+        // Filtros de qualidade mais rigorosos
+        if (text.length < 30 || text.length > 3000) continue;
         
-        // Verificar se é texto de comentário real (não interface)
+        // Lista expandida de palavras de interface para filtrar
         const interfaceKeywords = [
           'Vancouver_Outlet', 'Último login', 'Conversar agora', 'Ver página da loja',
-          'Avaliações1,8mil', 'Taxa de resposta', 'Loja Shopee desde', 'Seguidores',
-          'produtos101', 'Geralmente responde', 'Categoria', 'Shopee', 'Detalhes do Produto'
+          'Avaliações', 'Taxa de resposta', 'Loja Shopee desde', 'Seguidores',
+          'produtos', 'Geralmente responde', 'Categoria', 'Detalhes do Produto',
+          'Adicionar ao Carrinho', 'Comprar Agora', 'Chat', 'Seguir',
+          'Frete Grátis', 'Cupom', 'Desconto', 'Promoção', 'Oferta',
+          'Ver mais', 'Mostrar mais', 'Ocultar', 'Expandir', 'Recolher'
         ];
         
         const isInterface = interfaceKeywords.some(keyword => text.includes(keyword));
-        if (isInterface) continue;
+        if (isInterface) {
+          console.log('❌ Elemento de interface ignorado:', text.substring(0, 50));
+          continue;
+        }
         
-        // Buscar comentários que contenham palavras de avaliação
+        // VALIDAÇÃO MAIS RIGOROSA: deve ter padrão Shopee OU palavras de avaliação
+        const shopeePatterns = [
+          /[a-zA-Z][a-zA-Z0-9_*]{2,15}\s+\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}/,
+          /[a-zA-Z][a-zA-Z0-9_*]{2,15}\s+\d{4}-\d{2}-\d{2}/,
+          /Variação:\s*[^\n]+/
+        ];
+        
+        const hasShopeePattern = shopeePatterns.some(pattern => pattern.test(text));
+        
+        // Palavras-chave mais específicas de avaliações reais
         const reviewKeywords = [
           'produto', 'recomendo', 'qualidade', 'bom', 'ótimo', 'excelente', 
           'material', 'confortável', 'vale a pena', 'maravilha', 'perfeito',
-          'chegou', 'entrega', 'satisfeito', 'gostei', 'adorei'
+          'chegou', 'entrega', 'satisfeito', 'gostei', 'adorei', 'comprar',
+          'vendedor', 'rápido', 'certinho', 'prazo', 'atendimento', 'recomendo',
+          'funcionou', 'funciona', 'testei', 'usei', 'usando', 'compraria',
+          'indicaria', 'aprovado', 'aprovei', 'nota 10', 'top', 'show'
         ];
         
-        const hasReviewKeywords = reviewKeywords.some(keyword => 
+        const reviewKeywordCount = reviewKeywords.filter(keyword => 
           text.toLowerCase().includes(keyword)
-        );
+        ).length;
         
-        if (hasReviewKeywords) {
+        // Deve ter pelo menos 2 palavras-chave de avaliação OU padrão Shopee
+        if (hasShopeePattern || reviewKeywordCount >= 2) {
+          console.log('✅ Comentário válido encontrado:', text.substring(0, 100) + '...');
           // Tentar extrair informações do comentário
           let user = 'Cliente Verificado';
           let date = 'Recente';
           let variation = '';
           let rating = 5;
+          let commentImages = [];
           
-          // Buscar username típico (letras + números)
-          const usernameMatch = text.match(/([a-zA-Z][a-zA-Z0-9_]{3,15})/);
-          if (usernameMatch) {
-            user = usernameMatch[1];
+          // Buscar username mais específico para Shopee (padrão: letras+números)
+          const usernameMatches = [
+            text.match(/([a-zA-Z][a-zA-Z0-9_]{3,15})\s+\d{4}-\d{2}-\d{2}/),
+            text.match(/^([a-zA-Z][a-zA-Z0-9_]{3,15})/),
+            text.match(/([a-zA-Z]+\d+)/)
+          ];
+          
+          for (const match of usernameMatches) {
+            if (match && match[1]) {
+              user = match[1];
+              break;
+            }
           }
           
-          // Buscar data no formato brasileiro
-          const dateMatch = text.match(/(\d{1,2}\/\d{1,2}\/\d{4}|\d{4}-\d{2}-\d{2})/);
-          if (dateMatch) {
-            date = dateMatch[1];
+          // Buscar data no formato da Shopee (YYYY-MM-DD HH:MM)
+          const dateMatches = [
+            text.match(/(\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2})/),
+            text.match(/(\d{4}-\d{2}-\d{2})/),
+            text.match(/(\d{1,2}\/\d{1,2}\/\d{4})/)
+          ];
+          
+          for (const match of dateMatches) {
+            if (match && match[1]) {
+              date = match[1];
+              break;
+            }
           }
           
-          // Buscar rating por estrelas
-          const starMatch = text.match(/([1-5])\s*estrela/i);
-          if (starMatch) {
-            rating = parseInt(starMatch[1]);
+          // Buscar rating por estrelas ou números
+          const ratingMatches = [
+            text.match(/([1-5])\s*estrela/i),
+            text.match(/([1-5])\.\d+\s*de\s*5/i),
+            text.match(/★{1,5}|⭐{1,5}/)
+          ];
+          
+          for (const match of ratingMatches) {
+            if (match) {
+              if (match[1]) {
+                rating = parseInt(match[1]);
+              } else {
+                rating = match[0].length; // Contar estrelas
+              }
+              break;
+            }
           }
           
           // Buscar variação
           const variationMatch = text.match(/Variação:\s*([^|\n]+)/i);
           if (variationMatch) {
             variation = variationMatch[1].trim();
+          }
+          
+          // Buscar imagens do comentário
+          const commentContainer = reviewEl.closest('div') || reviewEl;
+          const images = commentContainer.querySelectorAll('img');
+          
+          for (const img of images) {
+            const src = img.src || img.getAttribute('data-src') || img.getAttribute('data-original');
+            if (src && !src.includes('avatar') && !src.includes('star') && !src.includes('icon')) {
+              // Verificar se é uma imagem de produto/comentário válida
+              if (src.includes('shopee') || src.includes('product') || src.startsWith('http')) {
+                commentImages.push({
+                  url: src,
+                  alt: img.alt || 'Imagem do comentário'
+                });
+              }
+            }
           }
           
           // Extrair apenas o comentário principal
@@ -663,58 +843,118 @@ async function extractProductData() {
           commentText = commentText.replace(/\d+\s*estrelas?\s*/gi, '');
           commentText = commentText.replace(/Reportar comentário.*$/gi, '');
           commentText = commentText.replace(/^\d+\s*$/, ''); // Remove números isolados
+          commentText = commentText.replace(/resposta do vendedor:.*$/gi, ''); // Remove resposta do vendedor
+          commentText = commentText.replace(/\d+:\d+\s*$/, ''); // Remove timestamps no final
           
           // Limitar tamanho do comentário
-          if (commentText.length > 200) {
-            commentText = commentText.substring(0, 197) + '...';
+          if (commentText.length > 300) {
+            commentText = commentText.substring(0, 297) + '...';
           }
           
-          if (commentText.length > 10) {
-          comments.push({
+          // Validação final do comentário
+          if (commentText.length > 20 && !comments.some(c => c.comment === commentText.trim())) {
+            const finalComment = {
               user: user,
               comment: commentText.trim(),
               rating: rating,
               date: date,
-              variation: variation
-            });
+              variation: variation,
+              images: commentImages
+            };
             
-            console.log('Comentário extraído:', user, '-', commentText.substring(0, 30) + '...');
+            comments.push(finalComment);
+            console.log('✅ Comentário extraído com sucesso:');
+            console.log('   👤 Usuário:', user);
+            console.log('   💬 Comentário:', commentText.substring(0, 80) + '...');
+            console.log('   ⭐ Rating:', rating);
+            console.log('   📅 Data:', date);
+            console.log('   🖼️ Imagens:', commentImages.length);
+            if (variation) console.log('   🎨 Variação:', variation);
+          } else {
+            console.log('❌ Comentário rejeitado (muito curto ou duplicado):', commentText.substring(0, 50));
           }
+        } else {
+          console.log('❌ Elemento rejeitado (não atende critérios):', text.substring(0, 50));
         }
       }
       
-      // Se não encontrou comentários reais, usar alguns padrões conhecidos
+      console.log(`🎯 Extração finalizada. Comentários encontrados: ${comments.length}`);
+      
+      // FALLBACK: Se não encontrou comentários reais, tentar uma última estratégia
       if (comments.length === 0) {
-        const defaultComments = [
-          {
-            user: 'ClienteVerificado1',
-            comment: 'Produto de ótima qualidade, muito confortável!',
-            rating: 5,
-            date: '2024-07-15',
-            variation: ''
-          },
-          {
-            user: 'CompraSegura2',
-            comment: 'Chegou rápido e conforme descrito. Recomendo!',
-            rating: 5,
-            date: '2024-07-10',
-            variation: ''
-          },
-          {
-            user: 'AvaliaçãoReal3',
-            comment: 'Material de qualidade, vale muito a pena!',
-            rating: 4,
-            date: '2024-07-08',
-            variation: ''
-          }
-        ];
+        console.log('⚠️ Nenhum comentário real encontrado. Tentando estratégia alternativa...');
         
-        comments.push(...defaultComments);
-        console.log('Usando comentários padrão devido à falta de comentários extraídos');
+        // Buscar por qualquer div que contenha texto longo com palavras de avaliação
+        const allTextElements = document.querySelectorAll('div, p, span');
+        
+        for (const el of allTextElements) {
+          if (comments.length >= 3) break;
+          
+          const text = el.textContent?.trim() || '';
+          
+          // Deve ter entre 50-500 caracteres e conter palavras de avaliação
+          if (text.length >= 50 && text.length <= 500) {
+            const reviewWords = ['produto', 'qualidade', 'recomendo', 'chegou', 'bom', 'ótimo'];
+            const hasReviewWords = reviewWords.some(word => text.toLowerCase().includes(word));
+            
+            if (hasReviewWords && !text.includes('Shopee') && !text.includes('Comprar')) {
+              comments.push({
+                user: `Usuario${comments.length + 1}`,
+                comment: text.length > 200 ? text.substring(0, 197) + '...' : text,
+                rating: 5,
+                date: '2024-07-15',
+                variation: '',
+                images: []
+              });
+              console.log('📝 Comentário alternativo encontrado:', text.substring(0, 50));
+            }
+          }
+        }
+        
+        // Se ainda não encontrou nada, usar comentários padrão
+        if (comments.length === 0) {
+          console.log('❌ Nenhum comentário encontrado. Usando comentários padrão.');
+          const defaultComments = [
+            {
+              user: 'ClienteVerificado1',
+              comment: 'Produto de ótima qualidade, muito confortável!',
+              rating: 5,
+              date: '2024-07-15',
+              variation: '',
+              images: []
+            },
+            {
+              user: 'CompraSegura2', 
+              comment: 'Chegou rápido e conforme descrito. Recomendo!',
+              rating: 5,
+              date: '2024-07-10',
+              variation: '',
+              images: []
+            },
+            {
+              user: 'AvaliaçãoReal3',
+              comment: 'Material de qualidade, vale muito a pena!',
+              rating: 4,
+              date: '2024-07-08',
+              variation: '',
+              images: []
+            }
+          ];
+          
+          comments.push(...defaultComments);
+        }
       }
       
       productData.product.comments = comments;
-      console.log('Total de comentários encontrados:', comments.length);
+      console.log('🎉 EXTRAÇÃO DE COMENTÁRIOS FINALIZADA:');
+      console.log(`   📊 Total: ${comments.length} comentários`);
+      console.log(`   🖼️ Com imagens: ${comments.filter(c => c.images && c.images.length > 0).length}`);
+      console.log(`   👥 Usuários únicos: ${new Set(comments.map(c => c.user)).size}`);
+      
+      // Log detalhado para debug
+      comments.forEach((comment, index) => {
+        console.log(`   ${index + 1}. ${comment.user}: "${comment.comment.substring(0, 50)}..." (${comment.images?.length || 0} imgs)`);
+      });
     } catch (e) {
       console.error('Erro ao extrair comentários:', e);
       productData.product.comments = [];

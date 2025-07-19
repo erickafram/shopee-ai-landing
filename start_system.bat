@@ -2,17 +2,20 @@
 echo 🚀 Iniciando Sistema Completo Shopee AI Landing
 echo.
 
-echo 📡 Iniciando servidor Python híbrido...
-start "Servidor Python" python scraper_hybrid_intelligent.py
+echo 📦 Instalando dependências Python...
+pip install -r requirements.txt --quiet
 
-timeout /t 3
+echo 📡 Iniciando servidor Python...
+start "Servidor Python" python json_landing_generator.py
+
+timeout /t 5
 
 echo 🌐 Iniciando frontend...
 start "Frontend" npm run dev
 
 echo.
 echo ✅ Sistema iniciado!
-echo 📡 Servidor Python: http://localhost:5000
+echo 📡 Servidor Python: http://localhost:5007
 echo 🌐 Frontend: http://localhost:8080
 echo.
 echo Pressione qualquer tecla para fechar...

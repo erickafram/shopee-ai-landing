@@ -97,9 +97,13 @@ const CreateLandingPage = () => {
       if (result.success) {
         setJsonData(data);
         setExtractedProduct(result.data);
-        // Inicializar todas as imagens como selecionadas por padrão
-        if (result.data?.images) {
-          setSelectedImages(result.data.images.map((_: any, idx: number) => idx));
+        
+        // Inicializar TODAS as imagens como selecionadas por padrão
+        const totalImages = result.data?.images?.length || 0;
+        if (totalImages > 0) {
+          const allImageIndices = Array.from({ length: totalImages }, (_, i) => i);
+          setSelectedImages(allImageIndices);
+          console.log(` Todas as ${totalImages} imagens foram selecionadas automaticamente`);
         }
         
         // Inicializar configurações do editor
@@ -343,7 +347,8 @@ const CreateLandingPage = () => {
         variations: {
           colors: extractedProduct.colors || [],
           sizes: extractedProduct.sizes || []
-        }
+        },
+        comments: extractedProduct.comments || []
       };
 
       console.log('🔧 Produto normalizado:', normalizedProduct);
@@ -680,21 +685,62 @@ const CreateLandingPage = () => {
                       </div>
                     )}
 
+                    {/* Quantidade em Estoque */}
+                    {extractedProduct?.stockQuantity && (
+                      <div>
+                        <Label>Quantidade Disponível</Label>
+                        <div className="mt-2 p-3 bg-green-50 border border-green-200 rounded-lg">
+                          <div className="flex items-center gap-2">
+                            <span className="text-2xl">📦</span>
+                            <span className="text-lg font-semibold text-green-700">
+                              {extractedProduct.stockQuantity} peças disponíveis
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
                     <div>
                       <Label>Especificações</Label>
                       <div className="space-y-2 mt-2">
-                        {Object.entries(extractedProduct?.specifications || {}).map(([key, value]) => (
-                          <div key={key} className="flex space-x-2">
-                            <Input readOnly value={key} className="w-1/3" />
-                            <Input readOnly value={value as string} className="w-2/3" />
+                        {Object.entries(extractedProduct?.specifications || {}).map(([key, value]) => {
+                          // Destacar campos importantes
+                          const isImportant = ['Estoque', 'Quantidade', 'Tamanho'].includes(key);
+                          return (
+                            <div key={key} className="flex space-x-2">
+                              <Input 
+                                readOnly 
+                                value={key} 
+                                className={`w-1/3 ${isImportant ? 'font-semibold' : ''}`} 
+                              />
+                              <Input 
+                                readOnly 
+                                value={value as string} 
+                                className={`w-2/3 ${isImportant ? 'font-semibold text-green-700' : ''}`} 
+                              />
+                            </div>
+                          );
+                        })}
+                        {/* Adicionar tamanho se for único e não estiver nas especificações */}
+                        {extractedProduct?.variations?.sizes?.length === 1 && 
+                         extractedProduct.variations.sizes[0] === 'Único' &&
+                         !Object.keys(extractedProduct?.specifications || {}).some(key => key.toLowerCase().includes('tamanho')) && (
+                          <div className="flex space-x-2">
+                            <Input readOnly value="Tamanho" className="w-1/3" />
+                            <Input readOnly value="Único" className="w-2/3" />
                           </div>
-                        ))}
+                        )}
                       </div>
                     </div>
 
                     <div className="flex items-center space-x-4 text-sm">
                       <Badge variant="secondary">⭐ {extractedProduct?.rating}</Badge>
-                      <Badge variant="outline">{extractedProduct?.totalRatings} avaliações</Badge>
+                      <Badge variant="outline">{extractedProduct?.comments?.length || extractedProduct?.totalRatings || 0} avaliações</Badge>
+                      {extractedProduct?.stockQuantity && (
+                        <Badge variant="default" className="bg-green-600">
+                          📦 {extractedProduct.stockQuantity} disponíveis
+                        </Badge>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -870,7 +916,7 @@ const CreateLandingPage = () => {
                                 <span>{extractedProduct?.rating || '4.9'}</span>
                               </Badge>
                               <Badge variant="outline">
-                                {extractedProduct?.totalRatings || '17'} avaliações
+                                {extractedProduct?.comments?.length || extractedProduct?.totalRatings || '17'} avaliações
                               </Badge>
                               <Badge variant="outline">
                                 {extractedProduct?.sold || '40'} vendidos

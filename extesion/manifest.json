@@ -1,8 +1,8 @@
 {
     "manifest_version": 3,
     "name": "Shopee Product Scraper",
-    "version": "1.0",
-    "description": "Extrai informações de produtos da Shopee e exporta em JSON",
+    "version": "1.1",
+    "description": "Extrai informações completas de produtos da Shopee incluindo tamanhos, cores e quantidade disponível",
     "permissions": [
       "activeTab",
       "storage",

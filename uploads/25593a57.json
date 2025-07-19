@@ -1,0 +1,27 @@
+{
+  "id": "25593a57",
+  "name": "Produto",
+  "price": "R$ 0,00",
+  "originalPrice": "",
+  "discount": "",
+  "rating": 0,
+  "totalRatings": 0,
+  "sold": 0,
+  "stock": 1000,
+  "description": "",
+  "category": "Produto",
+  "variations": [],
+  "specifications": {},
+  "images": [],
+  "features": [],
+  "benefits": [],
+  "shipping": {
+    "free_shipping": true
+  },
+  "warranty": "",
+  "brand": "",
+  "model": "",
+  "colors": [],
+  "sizes": [],
+  "timestamp": 1752879015.6212764
+}
