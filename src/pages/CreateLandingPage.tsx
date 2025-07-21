@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -47,10 +47,49 @@ const CreateLandingPage = () => {
     layout: 'modern',
     title: '',
     subtitle: '',
-    urgencyText: 'OFERTA POR TEMPO LIMITADO!'
+    urgencyText: 'OFERTA POR TEMPO LIMITADO!',
+    currentPrice: '',
+    originalPrice: ''
   });
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+
+  // Funções de cálculo corretas
+  const calculateSavings = (currentPrice: string, originalPrice: string): string => {
+    try {
+      // Extrair valores numéricos dos preços
+      const current = parseFloat(currentPrice.replace(/[^\d.,]/g, '').replace(',', '.'));
+      const original = parseFloat(originalPrice.replace(/[^\d.,]/g, '').replace(',', '.'));
+      
+      if (isNaN(current) || isNaN(original) || original <= current) {
+        return '';
+      }
+      
+      const savings = original - current;
+      return `R$ ${savings.toFixed(2).replace('.', ',')}`;
+    } catch (error) {
+      console.error('Erro ao calcular economia:', error);
+      return '';
+    }
+  };
+  
+  const calculateDiscountPercentage = (currentPrice: string, originalPrice: string): string => {
+    try {
+      // Extrair valores numéricos dos preços
+      const current = parseFloat(currentPrice.replace(/[^\d.,]/g, '').replace(',', '.'));
+      const original = parseFloat(originalPrice.replace(/[^\d.,]/g, '').replace(',', '.'));
+      
+      if (isNaN(current) || isNaN(original) || original <= current) {
+        return '';
+      }
+      
+      const discountPercentage = ((original - current) / original) * 100;
+      return `${Math.round(discountPercentage)}% OFF`;
+    } catch (error) {
+      console.error('Erro ao calcular desconto:', error);
+      return '';
+    }
+  };
 
   const steps = [
     { id: 1, title: "Upload JSON", description: "Faça upload do arquivo JSON" },
@@ -110,8 +149,22 @@ const CreateLandingPage = () => {
         setEditorSettings(prev => ({
           ...prev,
           title: result.data?.name || '',
-          subtitle: 'Produto de alta qualidade com o melhor custo-benefício'
+          subtitle: 'Produto de alta qualidade com o melhor custo-benefício',
+          currentPrice: result.data?.price || '',
+          originalPrice: result.data?.originalPrice || ''
         }));
+        
+        // Testar cálculos para debug
+        if (result.data?.price && result.data?.originalPrice) {
+          const testSavings = calculateSavings(result.data.price, result.data.originalPrice);
+          const testDiscount = calculateDiscountPercentage(result.data.price, result.data.originalPrice);
+          console.log('🧮 Teste de cálculos:');
+          console.log('💰 Preço atual:', result.data.price);
+          console.log('💰 Preço original:', result.data.originalPrice);
+          console.log('💸 Economia calculada:', testSavings);
+          console.log('🔥 Desconto calculado:', testDiscount);
+        }
+        
         setCurrentStep(2);
         toast({
           title: "Sucesso!",
@@ -152,6 +205,14 @@ const CreateLandingPage = () => {
 
   // Função para visualizar em página completa
   const openFullPagePreview = async () => {
+    console.log('🖼️ Abrindo preview completo...');
+    console.log('📋 Estado atual:', {
+      hasGeneratedPage: !!generatedPage?.html,
+      hasExtractedProduct: !!extractedProduct,
+      hasJsonData: !!jsonData,
+      productId: currentProductId
+    });
+    
     if (!generatedPage?.html) {
       toast({
         title: "Erro",
@@ -161,72 +222,40 @@ const CreateLandingPage = () => {
       return;
     }
 
-    if (!jsonData?.extractedAt) {
-      // Fallback para método direto se não tiver ID do produto
-      const newWindow = window.open('', '_blank');
-      if (newWindow) {
-        newWindow.document.write(generatedPage.html);
-        newWindow.document.close();
-        newWindow.document.title = `Landing Page - ${extractedProduct?.name || 'Produto'}`;
-        
-        toast({
-          title: "Página aberta!",
-          description: "Landing page aberta em nova aba para visualização completa"
-        });
-      }
+    if (!extractedProduct) {
+      toast({
+        title: "Erro",
+        description: "Dados do produto não encontrados",
+        variant: "destructive"
+      });
       return;
     }
 
-    try {
-      // Salvar landing page no backend e obter URL dedicada
-      const response = await fetch(`http://localhost:5007/api/landing-page/${getProductId()}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          html: generatedPage.html
-        })
+    // Sempre usar método direto para evitar erro 404
+    console.log('🔄 Usando método direto para abrir preview...');
+    const newWindow = window.open('', '_blank');
+    if (newWindow) {
+      newWindow.document.write(generatedPage.html);
+      newWindow.document.close();
+      newWindow.document.title = `Landing Page - ${extractedProduct?.name || 'Produto'}`;
+      
+      toast({
+        title: "✅ Página aberta!",
+        description: "Landing page aberta em nova aba para visualização completa"
       });
-
-      const result = await response.json();
       
-      if (result.success) {
-        // Salvar URL para uso posterior
-        setLandingPageUrl(result.landing_url);
-        
-        // Abrir URL dedicada da landing page
-        window.open(result.landing_url, '_blank');
-        
-        toast({
-          title: "✅ Página aberta!",
-          description: "Landing page disponível em URL dedicada"
-        });
-      } else {
-        throw new Error(result.error || 'Erro ao salvar landing page');
-      }
-    } catch (error) {
-      console.error('Erro ao abrir página completa:', error);
-      
-      // Fallback para método direto
-      const newWindow = window.open('', '_blank');
-      if (newWindow) {
-        newWindow.document.write(generatedPage.html);
-        newWindow.document.close();
-        newWindow.document.title = `Landing Page - ${extractedProduct?.name || 'Produto'}`;
-        
-        toast({
-          title: "Página aberta!",
-          description: "Landing page aberta em nova aba (método alternativo)"
-        });
-      } else {
-        toast({
-          title: "Erro",
-          description: "Não foi possível abrir nova aba. Verifique se popups estão bloqueados.",
-          variant: "destructive"
-        });
-      }
+      console.log('✅ Preview completo aberto com sucesso!');
+    } else {
+      toast({
+        title: "Erro",
+        description: "Não foi possível abrir nova aba. Verifique se popups estão bloqueados.",
+        variant: "destructive"
+      });
     }
+    return;
+
+    // Código de backend removido para evitar erro 404
+    // Usando apenas método direto que é mais confiável
   };
 
   // Estado para armazenar ID do produto atual
@@ -245,46 +274,509 @@ const CreateLandingPage = () => {
     return id;
   };
 
+  // Estado para forçar re-render do preview
+  const [previewKey, setPreviewKey] = useState(0);
+  
   // Funções do editor
-  const updateEditorSetting = (key: string, value: any) => {
-    setEditorSettings(prev => ({
-      ...prev,
-      [key]: value
-    }));
+  const updateEditorSetting = (key: string, value: string) => {
+    console.log(`🔄 Atualizando configuração: ${key} = ${value}`);
+    
+    setEditorSettings(prev => {
+      const newSettings = {
+        ...prev,
+        [key]: value
+      };
+      console.log('📋 Novas configurações do editor:', newSettings);
+      
+      // Aplicar alterações imediatamente após atualizar o estado
+      if (generatedPage) {
+        console.log('🔄 Agendando aplicação de alterações com novas configurações...');
+        setTimeout(() => {
+          console.log('🔧 Aplicando alterações com:', newSettings);
+          applyEditorChangesWithNewSettings(newSettings);
+        }, 100);
+      }
+      
+      return newSettings;
+    });
   };
-
-  const applyEditorChanges = async () => {
+  
+  // Função para aplicar alterações com configurações específicas
+  const applyEditorChangesWithNewSettings = async (settings = editorSettings) => {
     if (!extractedProduct || !generatedPage) return;
 
     try {
+      console.log('🔧 Aplicando alterações do editor:', settings);
+      
+      let updatedHtml = generatedPage.html;
+      
+      // 1. Aplicar cor principal
+      console.log('🎨 Aplicando cor:', settings.primaryColor);
+      
+      // Substituir variáveis CSS de cor
+      updatedHtml = updatedHtml.replace(
+        /--color-primary:\s*#[A-Fa-f0-9]{6}/gi,
+        `--color-primary: ${settings.primaryColor}`
+      );
+      updatedHtml = updatedHtml.replace(
+        /--color-primary-dark:\s*#[A-Fa-f0-9]{6}/gi,
+        `--color-primary-dark: ${settings.primaryColor}`
+      );
+      
+      // Substituir cores específicas
+      const specificColors = ['#667eea', '#EE4D2D', '#D73210', '#f97316', '#ec4899', '#ef4444', '#8b5cf6', '#10b981'];
+      specificColors.forEach(color => {
+        const colorRegex = new RegExp(color.replace('#', '\\#'), 'gi');
+        updatedHtml = updatedHtml.replace(colorRegex, settings.primaryColor);
+      });
+      
+      // 2. Aplicar textos
+      if (settings.title && settings.title.trim()) {
+        const escapedOriginalName = extractedProduct.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const titleRegex = new RegExp(`(<h1[^>]*class="product-title"[^>]*>)${escapedOriginalName}(</h1>)`, 'gi');
+        updatedHtml = updatedHtml.replace(titleRegex, `$1${settings.title}$2`);
+      }
+      
+      if (settings.ctaText && settings.ctaText.trim()) {
+        const ctaReplacements = [
+          /COMPRAR AGORA/gi,
+          /QUERO MEU SAPATO/gi,
+          /APROVEITAR OFERTA/gi,
+          /GARANTIR DESCONTO/gi
+        ];
+        
+        ctaReplacements.forEach(regex => {
+          updatedHtml = updatedHtml.replace(regex, settings.ctaText);
+        });
+      }
+      
+      // 3. Aplicar preços de forma mais robusta
+      const currentPriceToUse = settings.currentPrice || extractedProduct.price || '';
+      const originalPriceToUse = settings.originalPrice || extractedProduct.originalPrice || '';
+      
+      console.log('💰 Aplicando preços:', {
+        currentPriceToUse,
+        originalPriceToUse,
+        extractedCurrentPrice: extractedProduct.price,
+        extractedOriginalPrice: extractedProduct.originalPrice
+      });
+      
+      if (currentPriceToUse && currentPriceToUse.trim()) {
+        // Substituir preço atual em vários formatos
+        const currentPricePatterns = [
+          // Preço atual em spans com classes específicas
+          /(<span[^>]*class="[^"]*current[^"]*price[^"]*"[^>]*>)[^<]*(<\/span>)/gi,
+          /(<span[^>]*class="[^"]*price[^"]*current[^"]*"[^>]*>)[^<]*(<\/span>)/gi,
+          // Preço atual em divs
+          /(<div[^>]*class="[^"]*current[^"]*price[^"]*"[^>]*>)[^<]*(<\/div>)/gi,
+          /(<div[^>]*class="[^"]*price[^"]*current[^"]*"[^>]*>)[^<]*(<\/div>)/gi,
+          // Preço em formato R$ XX,XX (primeiro encontrado)
+          /(R\$\s*)[\d.,]+/i
+        ];
+        
+        let priceReplaced = false;
+        currentPricePatterns.forEach(pattern => {
+          if (!priceReplaced && updatedHtml.match(pattern)) {
+            if (pattern.source.includes('span') || pattern.source.includes('div')) {
+              updatedHtml = updatedHtml.replace(pattern, `$1${currentPriceToUse}$2`);
+            } else {
+              updatedHtml = updatedHtml.replace(pattern, `$1${currentPriceToUse}`);
+            }
+            priceReplaced = true;
+            console.log('✅ Preço atual substituído:', currentPriceToUse);
+          }
+        });
+        
+        // Fallback: substituir preço original do produto se não encontrou padrões
+        if (!priceReplaced && extractedProduct.price) {
+          const escapedOriginalPrice = extractedProduct.price.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          updatedHtml = updatedHtml.replace(
+            new RegExp(escapedOriginalPrice, 'gi'),
+            currentPriceToUse
+          );
+          console.log('✅ Preço atual substituído (fallback):', currentPriceToUse);
+        }
+      }
+      
+      if (originalPriceToUse && originalPriceToUse.trim()) {
+        // Substituir preço original (riscado) em vários formatos
+        const originalPricePatterns = [
+          // Preço original riscado
+          /(<span[^>]*class="[^"]*line-through[^"]*"[^>]*>)[^<]*(<\/span>)/gi,
+          /(<span[^>]*class="[^"]*original[^"]*price[^"]*"[^>]*>)[^<]*(<\/span>)/gi,
+          /(<del[^>]*>)[^<]*(<\/del>)/gi,
+          /(<s[^>]*>)[^<]*(<\/s>)/gi
+        ];
+        
+        let originalPriceReplaced = false;
+        originalPricePatterns.forEach(pattern => {
+          if (!originalPriceReplaced && updatedHtml.match(pattern)) {
+            updatedHtml = updatedHtml.replace(pattern, `$1${originalPriceToUse}$2`);
+            originalPriceReplaced = true;
+            console.log('✅ Preço original substituído:', originalPriceToUse);
+          }
+        });
+        
+        // Fallback: substituir preço original do produto se não encontrou padrões
+        if (!originalPriceReplaced && extractedProduct.originalPrice) {
+          const escapedOriginalOriginalPrice = extractedProduct.originalPrice.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          updatedHtml = updatedHtml.replace(
+            new RegExp(escapedOriginalOriginalPrice, 'gi'),
+            originalPriceToUse
+          );
+          console.log('✅ Preço original substituído (fallback):', originalPriceToUse);
+        }
+      }
+      
+      console.log('✅ HTML atualizado, aplicando ao preview...');
+      console.log('🖼️ Verificando se imagens estão preservadas:', updatedHtml.includes('<img'));
+      
+      // Atualizar o estado e forçar re-render
+      setGeneratedPage(prev => ({
+        ...prev,
+        html: updatedHtml
+      }));
+      
+      // Forçar re-render do preview
+      setPreviewKey(prev => prev + 1);
+      
+      console.log('✅ Preview atualizado com sucesso!');
+      console.log('📊 Estado atual do editor:', settings);
+      
+    } catch (error) {
+      console.error('❌ Erro ao aplicar alterações:', error);
+    }
+  };
+  
+  // Funções duplicadas removidas - usando as definidas no início do arquivo
+
+  const applyEditorChanges = async () => {
+    console.log('🔄 Aplicando alterações do editor (função principal)...');
+    console.log('📋 Configurações atuais do editor:', editorSettings);
+    
+    // Usar a nova função com as configurações atuais
+    return applyEditorChangesWithNewSettings(editorSettings);
+  };
+  
+  const applyEditorChangesOld = async () => {
+    if (!extractedProduct || !generatedPage) return;
+
+    try {
+      console.log('🔧 Aplicando alterações do editor:', editorSettings);
+      
       // Aplicar as configurações do editor ao HTML gerado
       let updatedHtml = generatedPage.html;
       
-      // Substituir cores
-      updatedHtml = updatedHtml.replace(/#667eea/g, editorSettings.primaryColor);
+      // 1. Substituir TODAS as cores primárias de forma mais robusta
+      console.log('🎨 Aplicando cor:', editorSettings.primaryColor);
       
-      // Substituir texto do CTA
-      updatedHtml = updatedHtml.replace(/COMPRAR AGORA/g, editorSettings.ctaText);
-      updatedHtml = updatedHtml.replace(/QUERO MEU SAPATO/g, editorSettings.ctaText);
+      // Substituir variáveis CSS de cor
+      updatedHtml = updatedHtml.replace(
+        /--color-primary:\s*#[A-Fa-f0-9]{6}/gi,
+        `--color-primary: ${editorSettings.primaryColor}`
+      );
+      updatedHtml = updatedHtml.replace(
+        /--color-primary-dark:\s*#[A-Fa-f0-9]{6}/gi,
+        `--color-primary-dark: ${editorSettings.primaryColor}`
+      );
       
-      // Substituir título se fornecido
-      if (editorSettings.title) {
+      // Substituir cores específicas no CSS e HTML
+      const specificColors = ['#667eea', '#EE4D2D', '#D73210', '#f97316', '#ec4899', '#ef4444', '#8b5cf6', '#10b981'];
+      specificColors.forEach(color => {
+        const colorRegex = new RegExp(color.replace('#', '\\#'), 'gi');
+        updatedHtml = updatedHtml.replace(colorRegex, editorSettings.primaryColor);
+      });
+      
+      // Substituir cores em estilos inline
+      updatedHtml = updatedHtml.replace(
+        /background-color:\s*#[A-Fa-f0-9]{6}/gi,
+        `background-color: ${editorSettings.primaryColor}`
+      );
+      updatedHtml = updatedHtml.replace(
+        /color:\s*#[A-Fa-f0-9]{6}/gi,
+        `color: ${editorSettings.primaryColor}`
+      );
+      updatedHtml = updatedHtml.replace(
+        /border-color:\s*#[A-Fa-f0-9]{6}/gi,
+        `border-color: ${editorSettings.primaryColor}`
+      );
+      
+      // 2. Substituir texto do CTA em TODOS os botões
+      const ctaReplacements = [
+        /COMPRAR AGORA/gi,
+        /QUERO MEU SAPATO/gi,
+        /APROVEITAR OFERTA/gi,
+        /GARANTIR DESCONTO/gi,
+        /QUERO PARA MEU FILHO/gi,
+        /GARANTE O SEU/gi,
+        /QUERO MEU TÊNIS/gi,
+        /QUERO AGORA/gi,
+        /QUERO ESSA PEÇA/gi,
+        /GARANTIR O MEU/gi,
+        /QUERO NO MEU PULSO/gi,
+        /QUERO COMIGO/gi
+      ];
+      
+      ctaReplacements.forEach(regex => {
+        updatedHtml = updatedHtml.replace(regex, editorSettings.ctaText);
+      });
+      
+      // 3. Substituir título principal se fornecido
+      if (editorSettings.title && editorSettings.title.trim()) {
+        // Escapar caracteres especiais para regex
+        const escapedOriginalName = extractedProduct.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const titleRegex = new RegExp(`(<h1[^>]*class="product-title"[^>]*>)${escapedOriginalName}(</h1>)`, 'gi');
+        updatedHtml = updatedHtml.replace(titleRegex, `$1${editorSettings.title}$2`);
+        
+        // Também substituir no title da página
+        const pageTitleRegex = new RegExp(`(<title>)${escapedOriginalName}(</title>)`, 'gi');
+        updatedHtml = updatedHtml.replace(pageTitleRegex, `$1${editorSettings.title}$2`);
+      }
+      
+      // 4. Substituir subtítulo se fornecido
+      if (editorSettings.subtitle && editorSettings.subtitle.trim()) {
+        // Procurar por elementos de subtítulo comuns
+        const subtitleReplacements = [
+          /Produto de alta qualidade com o melhor custo-benefício/gi,
+          /Produto original da Shopee com garantia e entrega rápida/gi,
+          /Seguro, educativo e super divertido para seu filho/gi,
+          /Trabalhe, estude e se divirta onde quiser/gi
+        ];
+        
+        subtitleReplacements.forEach(regex => {
+          updatedHtml = updatedHtml.replace(regex, editorSettings.subtitle);
+        });
+        
+        // Substituir em elementos específicos
         updatedHtml = updatedHtml.replace(
-          new RegExp(extractedProduct.name, 'g'), 
-          editorSettings.title
+          /(<p class="product-subtitle"[^>]*>).*?(<\/p>)/gi,
+          `$1${editorSettings.subtitle}$2`
         );
+      }
+      
+      // 5. Substituir texto de urgência
+      if (editorSettings.urgencyText && editorSettings.urgencyText.trim()) {
+        const urgencyReplacements = [
+          /OFERTA POR TEMPO LIMITADO!/gi,
+          /⏰ Desconto por TEMPO LIMITADO - Apenas hoje!/gi,
+          /🔥 Últimas unidades em estoque!/gi
+        ];
+        
+        urgencyReplacements.forEach(regex => {
+          updatedHtml = updatedHtml.replace(regex, editorSettings.urgencyText);
+        });
+        
+        // Substituir na barra de urgência mantendo o countdown
+        updatedHtml = updatedHtml.replace(
+          /(<div class="urgency-bar"[^>]*>).*?(<span id="countdown">.*?<\/span>.*?<\/div>)/gi,
+          `$1${editorSettings.urgencyText} $2`
+        );
+      }
+      
+      // 6. Substituir preços de forma mais robusta
+      console.log('💰 Aplicando preços:', {
+        currentPrice: editorSettings.currentPrice,
+        originalPrice: editorSettings.originalPrice,
+        extractedCurrentPrice: extractedProduct.price,
+        extractedOriginalPrice: extractedProduct.originalPrice
+      });
+      
+      // Substituir preço atual
+      const currentPriceToUse = editorSettings.currentPrice || extractedProduct.price || '';
+      const originalPriceToUse = editorSettings.originalPrice || extractedProduct.originalPrice || '';
+      
+      if (currentPriceToUse && currentPriceToUse.trim()) {
+        // Encontrar e substituir preços atuais em vários formatos
+        const pricePatterns = [
+          /R\$\s*[\d.,]+/gi,
+          /<span[^>]*class="[^"]*current[^"]*price[^"]*"[^>]*>[^<]*<\/span>/gi,
+          /<div[^>]*class="[^"]*price[^"]*"[^>]*>[^<]*<\/div>/gi
+        ];
+        
+        // Substituir o primeiro preço encontrado (que geralmente é o preço atual)
+        let priceReplaced = false;
+        pricePatterns.forEach(pattern => {
+          if (!priceReplaced) {
+            const matches = updatedHtml.match(pattern);
+            if (matches && matches.length > 0) {
+              // Substituir apenas a primeira ocorrência (preço atual)
+              updatedHtml = updatedHtml.replace(pattern, (match) => {
+                if (!priceReplaced) {
+                  priceReplaced = true;
+                  if (match.includes('<span') || match.includes('<div')) {
+                    return match.replace(/>[^<]*</, `>${currentPriceToUse}<`);
+                  } else {
+                    return currentPriceToUse;
+                  }
+                }
+                return match;
+              });
+            }
+          }
+        });
+        
+        // Se não encontrou padrões específicos, substituir o preço original do produto
+        if (!priceReplaced && extractedProduct.price) {
+          const escapedOriginalPrice = extractedProduct.price.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          updatedHtml = updatedHtml.replace(
+            new RegExp(escapedOriginalPrice, 'gi'),
+            currentPriceToUse
+          );
+        }
+      }
+      
+      // Substituir preço original (riscado)
+      if (originalPriceToUse && originalPriceToUse.trim()) {
+        const originalPricePatterns = [
+          /<span[^>]*class="[^"]*line-through[^"]*"[^>]*>[^<]*<\/span>/gi,
+          /<span[^>]*class="[^"]*original[^"]*price[^"]*"[^>]*>[^<]*<\/span>/gi,
+          /<del[^>]*>[^<]*<\/del>/gi
+        ];
+        
+        originalPricePatterns.forEach(pattern => {
+          updatedHtml = updatedHtml.replace(pattern, (match) => {
+            return match.replace(/>[^<]*</, `>${originalPriceToUse}<`);
+          });
+        });
+        
+        // Se não encontrou padrões específicos, substituir o preço original do produto
+        if (extractedProduct.originalPrice) {
+          const escapedOriginalOriginalPrice = extractedProduct.originalPrice.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          updatedHtml = updatedHtml.replace(
+            new RegExp(escapedOriginalOriginalPrice, 'gi'),
+            originalPriceToUse
+          );
+        }
+      }
+      
+      // 7. Atualizar economia e desconto se ambos os preços estiverem definidos
+      const currentPriceForCalc = editorSettings.currentPrice || extractedProduct.price || '';
+      const originalPriceForCalc = editorSettings.originalPrice || extractedProduct.originalPrice || '';
+      
+      console.log('💰 Calculando economia e desconto:', {
+        currentPrice: currentPriceForCalc,
+        originalPrice: originalPriceForCalc
+      });
+      
+      if (currentPriceForCalc && originalPriceForCalc) {
+        const newSavings = calculateSavings(currentPriceForCalc, originalPriceForCalc);
+        const newDiscount = calculateDiscountPercentage(currentPriceForCalc, originalPriceForCalc);
+        
+        console.log('📊 Resultados dos cálculos:', {
+          savings: newSavings,
+          discount: newDiscount
+        });
+        
+        if (newSavings) {
+          console.log('💸 Aplicando economia:', newSavings);
+          
+          // Debug: verificar conteúdo HTML antes da substituição
+          console.log('🔍 HTML antes da substituição de economia:');
+          const economyMatches = updatedHtml.match(/Você economiza[^<>]*R\$[^<>]*/gi);
+          console.log('💸 Encontrados textos de economia:', economyMatches);
+          
+          const discountMatches = updatedHtml.match(/\d+%\s*OFF/gi);
+          console.log('🔥 Encontrados textos de desconto:', discountMatches);
+          
+          // Substituir texto de economia em vários formatos
+          const savingsPatterns = [
+            // "Você economiza R$ XX,XX"
+            /(Você economiza:?\s*)R\$\s*[\d.,]+/gi,
+            // "Economiza R$ XX,XX"
+            /(Economiza:?\s*)R\$\s*[\d.,]+/gi,
+            // Spans com classe savings
+            /(<span[^>]*class="[^"]*savings[^"]*"[^>]*>)[^<]*(<\/span>)/gi,
+            // Divs com classe savings
+            /(<div[^>]*class="[^"]*savings[^"]*"[^>]*>)[^<]*(<\/div>)/gi,
+            // Padrão genérico para economia
+            /R\$\s*[\d.,]+(?=\s*(?:de\s*economia|economizado))/gi
+          ];
+          
+          savingsPatterns.forEach((pattern, index) => {
+            const beforeReplace = updatedHtml;
+            const matches = updatedHtml.match(pattern);
+            
+            if (matches) {
+              console.log(`🎯 Padrão ${index + 1} encontrou:`, matches);
+            }
+            
+            if (pattern.source.includes('span') || pattern.source.includes('div')) {
+              updatedHtml = updatedHtml.replace(pattern, `$1${newSavings}$2`);
+            } else {
+              updatedHtml = updatedHtml.replace(pattern, `$1${newSavings}`);
+            }
+            
+            if (beforeReplace !== updatedHtml) {
+              console.log(`✅ Economia substituída (padrão ${index + 1}):`, newSavings);
+            }
+          });
+          
+          // Debug: verificar conteúdo HTML após substituição
+          console.log('🔍 HTML após substituição de economia:');
+          const economyMatchesAfter = updatedHtml.match(/Você economiza[^<>]*R\$[^<>]*/gi);
+          console.log('💸 Textos de economia após substituição:', economyMatchesAfter);
+        }
+        
+        if (newDiscount) {
+          console.log('🔥 Aplicando desconto:', newDiscount);
+          
+          // Substituir desconto percentual em vários formatos
+          const discountPatterns = [
+            // "XX% OFF"
+            /\d+%\s*OFF/gi,
+            // "XX% de desconto"
+            /\d+%\s*de\s*desconto/gi,
+            // Badges e spans com classe discount
+            /(<[^>]*class="[^"]*discount[^"]*"[^>]*>)[^<]*(<\/[^>]*>)/gi,
+            // Spans específicos de desconto
+            /(<span[^>]*class="[^"]*discount[^"]*"[^>]*>)[^<]*(<\/span>)/gi,
+            // Divs de desconto
+            /(<div[^>]*class="[^"]*discount[^"]*"[^>]*>)[^<]*(<\/div>)/gi
+          ];
+          
+          discountPatterns.forEach((pattern, index) => {
+            const beforeReplace = updatedHtml;
+            const matches = updatedHtml.match(pattern);
+            
+            if (matches) {
+              console.log(`🎯 Padrão de desconto ${index + 1} encontrou:`, matches);
+            }
+            
+            if (pattern.source.includes('<')) {
+              updatedHtml = updatedHtml.replace(pattern, `$1${newDiscount}$2`);
+            } else {
+              updatedHtml = updatedHtml.replace(pattern, newDiscount);
+            }
+            
+            if (beforeReplace !== updatedHtml) {
+              console.log(`✅ Desconto substituído (padrão ${index + 1}):`, newDiscount);
+            }
+          });
+          
+          // Debug: verificar conteúdo HTML após substituição
+          console.log('🔍 HTML após substituição de desconto:');
+          const discountMatchesAfter = updatedHtml.match(/\d+%\s*OFF/gi);
+          console.log('🔥 Textos de desconto após substituição:', discountMatchesAfter);
+        }
       }
 
       setGeneratedPage(prev => ({
         ...prev,
         html: updatedHtml
       }));
-
-      toast({
-        title: "Alterações aplicadas!",
-        description: "Sua landing page foi atualizada com as novas configurações"
-      });
+      
+      console.log('✅ Alterações aplicadas com sucesso!');
+      
+      // Forçar re-render do iframe
+      setTimeout(() => {
+        const iframe = document.querySelector('iframe[title="Landing Page Preview"]') as HTMLIFrameElement;
+        if (iframe) {
+          iframe.srcdoc = updatedHtml;
+        }
+      }, 100);
+      
     } catch (error) {
+      console.error('❌ Erro ao aplicar alterações:', error);
       toast({
         title: "Erro",
         description: "Não foi possível aplicar as alterações",
@@ -1062,17 +1554,91 @@ const CreateLandingPage = () => {
                                     : 'border-gray-300 hover:scale-105'
                                 }`}
                                 style={{ backgroundColor: colorOption.color }}
-                                onClick={() => updateEditorSetting('primaryColor', colorOption.color)}
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  console.log('🎨 Clicando na cor:', colorOption.color);
+                                  updateEditorSetting('primaryColor', colorOption.color);
+                                  // Aplicar imediatamente
+                                  setTimeout(() => applyEditorChanges(), 100);
+                                }}
                                 title={colorOption.name}
                               />
                             ))}
                           </div>
-                          <Input
-                            type="color"
-                            value={editorSettings.primaryColor}
-                            onChange={(e) => updateEditorSetting('primaryColor', e.target.value)}
-                            className="w-full h-10"
-                          />
+                          <div className="flex space-x-2">
+                            <Input
+                              type="color"
+                              value={editorSettings.primaryColor}
+                              onChange={(e) => {
+                                console.log('🎨 Mudando cor via picker:', e.target.value);
+                                updateEditorSetting('primaryColor', e.target.value);
+                                setTimeout(() => applyEditorChanges(), 100);
+                              }}
+                              className="w-16 h-10 p-1 border rounded"
+                            />
+                            <Input
+                              type="text"
+                              value={editorSettings.primaryColor}
+                              onChange={(e) => {
+                                // Validar se é uma cor hexadecimal válida
+                                const hexRegex = /^#[0-9A-Fa-f]{6}$/;
+                                if (hexRegex.test(e.target.value) || e.target.value === '') {
+                                  console.log('🎨 Mudando cor via texto:', e.target.value);
+                                  updateEditorSetting('primaryColor', e.target.value);
+                                  if (hexRegex.test(e.target.value)) {
+                                    setTimeout(() => applyEditorChanges(), 100);
+                                  }
+                                }
+                              }}
+                              placeholder="#667eea"
+                              className="flex-1 h-10 text-sm font-mono"
+                              maxLength={7}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {/* Preços Editáveis */}
+                      <div className="space-y-3">
+                        <Label className="text-sm font-medium">Preços do Produto</Label>
+                        <div className="space-y-2">
+                          <div>
+                            <Label className="text-xs text-muted-foreground">Preço Atual</Label>
+                            <Input
+                              value={editorSettings.currentPrice || extractedProduct?.price || ''}
+                              onChange={(e) => updateEditorSetting('currentPrice', e.target.value)}
+                              placeholder="R$ 99,90"
+                              className="text-sm"
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-xs text-muted-foreground">Preço Original</Label>
+                            <Input
+                              value={editorSettings.originalPrice || extractedProduct?.originalPrice || ''}
+                              onChange={(e) => updateEditorSetting('originalPrice', e.target.value)}
+                              placeholder="R$ 199,90"
+                              className="text-sm"
+                            />
+                          </div>
+                          {/* Mostrar economia calculada */}
+                          {(editorSettings.currentPrice || extractedProduct?.price) && 
+                           (editorSettings.originalPrice || extractedProduct?.originalPrice) && (
+                            <div className="bg-green-50 p-2 rounded text-xs space-y-1">
+                              <div className="text-green-700 font-medium">
+                                💰 Você economiza: {calculateSavings(
+                                  editorSettings.currentPrice || extractedProduct?.price || '',
+                                  editorSettings.originalPrice || extractedProduct?.originalPrice || ''
+                                )}
+                              </div>
+                              <div className="text-green-600">
+                                🔥 Desconto: {calculateDiscountPercentage(
+                                  editorSettings.currentPrice || extractedProduct?.price || '',
+                                  editorSettings.originalPrice || extractedProduct?.originalPrice || ''
+                                )}
+                              </div>
+                            </div>
+                          )}
                         </div>
                       </div>
                       
@@ -1138,7 +1704,9 @@ const CreateLandingPage = () => {
                             layout: 'modern',
                             title: extractedProduct?.name || '',
                             subtitle: 'Produto de alta qualidade com o melhor custo-benefício',
-                            urgencyText: 'OFERTA POR TEMPO LIMITADO!'
+                            urgencyText: 'OFERTA POR TEMPO LIMITADO!',
+                            currentPrice: extractedProduct?.price || '',
+                            originalPrice: extractedProduct?.originalPrice || ''
                           });
                         }}
                         className="w-full"
@@ -1162,9 +1730,11 @@ const CreateLandingPage = () => {
                         {generatedPage ? (
                           <div className="relative">
                             <iframe
+                              key={`preview-${previewKey}`}
                               srcDoc={generatedPage.html}
                               className="w-full h-[500px] border-0"
                               title="Landing Page Preview"
+                              onLoad={() => console.log('🖼️ Preview carregado!')}
                             />
                             <div className="absolute top-2 right-2 bg-black/70 text-white px-2 py-1 rounded text-xs">
                               Preview ao vivo

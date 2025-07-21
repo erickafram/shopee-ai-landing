@@ -84,6 +84,99 @@ class AILandingPageGenerator {
     return this.generateSmartAnalysis(productData);
   }
 
+  // FUNÇÃO PARA GERAR BENEFÍCIOS INTELIGENTES BASEADOS NA DESCRIÇÃO
+  private generateSmartBenefits(productData: ShopeeProduct): string[] {
+    const description = (productData.description || '').toLowerCase();
+    const name = (productData.name || '').toLowerCase();
+    const benefits: string[] = [];
+    
+    // Palavras-chave para diferentes tipos de benefícios
+    const qualityKeywords = ['premium', 'qualidade', 'alta qualidade', 'superior', 'excelente', 'resistente', 'durável', 'duradouro'];
+    const comfortKeywords = ['conforto', 'confortável', 'macio', 'ergonômico', 'suave', 'flexível'];
+    const designKeywords = ['design', 'estilo', 'elegante', 'moderno', 'bonito', 'atraente', 'visual'];
+    const functionalityKeywords = ['funcional', 'prático', 'útil', 'versátil', 'multifuncional', 'eficiente'];
+    const technologyKeywords = ['tecnologia', 'avançado', 'inovador', 'inteligente', 'digital', 'smart'];
+    const safetyKeywords = ['seguro', 'segurança', 'proteção', 'protegido', 'antiderrapante', 'resistente'];
+    const batteryKeywords = ['bateria', 'energia', 'duração', 'autonomia', 'carregamento'];
+    const materialKeywords = ['material', 'tecido', 'couro', 'algodão', 'silicone', 'metal', 'plástico'];
+    
+    // Analisar descrição e nome do produto
+    const fullText = `${description} ${name}`;
+    
+    // Gerar benefícios baseados nas palavras-chave encontradas
+    if (this.containsAnyKeyword(fullText, qualityKeywords)) {
+      benefits.push('🔥 Qualidade premium que supera expectativas');
+    }
+    
+    if (this.containsAnyKeyword(fullText, comfortKeywords)) {
+      benefits.push('😌 Conforto excepcional para uso prolongado');
+    }
+    
+    if (this.containsAnyKeyword(fullText, designKeywords)) {
+      benefits.push('✨ Design moderno que impressiona');
+    }
+    
+    if (this.containsAnyKeyword(fullText, functionalityKeywords)) {
+      benefits.push('🎯 Funcionalidade que você realmente precisa');
+    }
+    
+    if (this.containsAnyKeyword(fullText, technologyKeywords)) {
+      benefits.push('🚀 Tecnologia avançada de última geração');
+    }
+    
+    if (this.containsAnyKeyword(fullText, safetyKeywords)) {
+      benefits.push('🛡️ Segurança e proteção garantidas');
+    }
+    
+    if (this.containsAnyKeyword(fullText, batteryKeywords)) {
+      benefits.push('🔋 Bateria de longa duração');
+    }
+    
+    if (this.containsAnyKeyword(fullText, materialKeywords)) {
+      benefits.push('💪 Materiais de primeira linha');
+    }
+    
+    // Benefícios específicos baseados em características mencionadas
+    if (fullText.includes('água') || fullText.includes('impermeável')) {
+      benefits.push('💧 Resistente à água');
+    }
+    
+    if (fullText.includes('leve') || fullText.includes('peso')) {
+      benefits.push('⚡ Leveza que você sente');
+    }
+    
+    if (fullText.includes('fácil') || fullText.includes('simples')) {
+      benefits.push('👌 Fácil de usar e configurar');
+    }
+    
+    if (fullText.includes('rápido') || fullText.includes('velocidade')) {
+      benefits.push('⚡ Performance rápida e eficiente');
+    }
+    
+    if (fullText.includes('garantia')) {
+      benefits.push('✅ Garantia de qualidade assegurada');
+    }
+    
+    // Se não encontrou benefícios específicos, usar benefícios genéricos mas relevantes
+    if (benefits.length === 0) {
+      benefits.push(
+        '🔥 Qualidade premium que faz a diferença',
+        '💪 Durabilidade testada e comprovada',
+        '✨ Design moderno e atraente',
+        '🎯 Funcionalidade que você precisa',
+        '💰 Melhor custo-benefício do mercado'
+      );
+    }
+    
+    // Limitar a 5 benefícios para não sobrecarregar
+    return benefits.slice(0, 5);
+  }
+  
+  // Função auxiliar para verificar se o texto contém alguma palavra-chave
+  private containsAnyKeyword(text: string, keywords: string[]): boolean {
+    return keywords.some(keyword => text.includes(keyword));
+  }
+
   // GERAÇÃO LOCAL INTELIGENTE (Sem alterações nesta função)
   private generateLocalCopy(productData: ShopeeProduct): LandingPageCopy {
     const productName = productData.name.toLowerCase();
@@ -98,17 +191,17 @@ class AILandingPageGenerator {
     let headline = productData.name;
     let subheadline = "Produto original da Shopee com garantia e entrega rápida";
     let cta_principal = "COMPRAR AGORA";
-    let beneficios: string[] = [];
+    // Gerar benefícios baseados na descrição real do produto
+    let beneficios: string[] = this.generateSmartBenefits(productData);
+
     if (isTablet && isKids) {
       headline = "🚀 Tablet que Transforma Brincadeira em Aprendizado!";
       subheadline = "Seguro, educativo e super divertido para seu filho";
       cta_principal = "QUERO PARA MEU FILHO";
-      beneficios = ["🛡️ Controle parental total para navegação segura", "🎓 Jogos educativos que desenvolvem o aprendizado", "💪 Tela resistente a quedas e impactos", "🔋 Bateria de longa duração para diversão sem parar", "👶 Design ergonômico especial para crianças"];
     } else if (isTablet) {
       headline = "💻 Performance Premium na Palma da Sua Mão";
       subheadline = "Trabalhe, estude e se divirta onde quiser";
       cta_principal = "GARANTE O SEU";
-      beneficios = ["🚀 Performance superior para multitarefas", "✨ Tela de alta qualidade para máxima nitidez", "💾 Armazenamento generoso para todos seus arquivos", "🎨 Design premium e portabilidade total", "💰 Tecnologia avançada pelo melhor preço"];
     } else if (isShoe) {
       const isSocial = productName.includes('social') || productName.includes('elegante') || productName.includes('formal');
       const isSneaker = productName.includes('tenis') || productName.includes('esportivo') || productName.includes('casual');
@@ -116,40 +209,31 @@ class AILandingPageGenerator {
         headline = "👞 Elegância e Conforto que Impressionam!";
         subheadline = "O sapato social perfeito para sua confiança e sucesso profissional";
         cta_principal = "QUERO MEU SAPATO";
-        beneficios = ["🔥 Couro genuíno de alta qualidade e durabilidade", "😌 Conforto excepcional para uso o dia todo", "💼 Design elegante que transmite profissionalismo", "🛡️ Solado antiderrapante para máxima segurança", "✨ Estilo clássico e versátil para todas ocasiões"];
       } else if (isSneaker) {
         headline = "👟 Conforto e Estilo para Seus Pés!";
         subheadline = "O tênis perfeito para seu dia a dia com máximo conforto";
         cta_principal = "QUERO MEU TÊNIS";
-        beneficios = ["🏃 Amortecimento superior para caminhadas longas", "💨 Material respirável que mantém os pés secos", "💪 Solado flexível e resistente ao desgaste", "🎨 Design moderno que combina com tudo", "⚡ Leveza que você sente a cada passo"];
       } else {
         headline = "👠 Pisada Perfeita, Estilo Garantido!";
         subheadline = "Calçado de qualidade que une conforto e beleza";
         cta_principal = "QUERO AGORA";
-        beneficios = ["✨ Material de primeira qualidade", "😌 Conforto incomparável para seus pés", "🎯 Design que valoriza seu estilo pessoal", "💪 Durabilidade testada e aprovada", "🔥 Versatilidade para qualquer ocasião"];
       }
     } else if (isClothing) {
       headline = "👕 Vista-se com Estilo e Confiança!";
       subheadline = "Roupa de qualidade que valoriza sua personalidade";
       cta_principal = "QUERO ESSA PEÇA";
-      beneficios = ["🧵 Tecido premium com toque macio e durável", "✨ Caimento perfeito que valoriza seu corpo", "🎨 Design moderno que nunca sai de moda", "🌡️ Conforto térmico ideal para qualquer clima", "💫 Versatilidade para looks casuais e elegantes"];
     } else if (isPhone) {
       headline = "📱 Tecnologia que Cabe na Sua Mão!";
       subheadline = "Smartphone poderoso para conectar você ao mundo";
       cta_principal = "GARANTIR O MEU";
-      beneficios = ["🚀 Processador potente para máxima velocidade", "📸 Câmera profissional para fotos incríveis", "🔋 Bateria que dura o dia todo sem preocupação", "📱 Tela brilhante com cores vibrantes", "🛡️ Design resistente e elegante"];
     } else if (isWatch) {
       headline = "⌚ Tempo e Estilo no Seu Pulso!";
       subheadline = "Relógio que combina funcionalidade e elegância";
       cta_principal = "QUERO NO MEU PULSO";
-      beneficios = ["⏰ Precisão suíça em cada segundo", "💎 Design sofisticado que impressiona", "💪 Resistência à água e impactos", "🔋 Autonomia excepcional de bateria", "✨ Versatilidade para todas as ocasiões"];
     } else if (isBag) {
       headline = "👜 Praticidade e Estilo Onde Você For!";
       subheadline = "Bolsa perfeita para organizar sua vida com elegância";
       cta_principal = "QUERO COMIGO";
-      beneficios = ["👜 Compartimentos inteligentes para organização", "💪 Material resistente e durável", "✨ Design elegante para qualquer ocasião", "🔒 Segurança e proteção para seus pertences", "🎯 Tamanho ideal para o dia a dia"];
-    } else {
-      beneficios = ["🔥 Qualidade premium que faz a diferença", "💪 Durabilidade testada e comprovada", "✨ Design moderno e atraente", "🎯 Funcionalidade que você precisa", "💰 Melhor custo-benefício do mercado"];
     }
     return {
       headline,
@@ -367,6 +451,136 @@ class AILandingPageGenerator {
         }
         .product-thumbnail:hover { border-color: var(--color-primary); }
         .product-thumbnail.active { border-color: var(--color-primary); box-shadow: 0 0 5px rgba(238, 77, 45, 0.5); }
+        
+        /* OFERTAS RELÂMPAGO - Layout igual à Shopee */
+        .flash-sale-section {
+            margin: 20px 0;
+            border-radius: var(--border-radius);
+            overflow: hidden;
+            box-shadow: var(--shadow-md);
+        }
+        
+        .flash-sale-header {
+            background: linear-gradient(135deg, #EE4D2D 0%, #FF6B35 100%);
+            color: white;
+            padding: 12px 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 600;
+        }
+        
+        .flash-sale-title {
+            font-size: 0.9rem;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+        }
+        
+        .flash-sale-timer {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.8rem;
+        }
+        
+        .timer-icon {
+            font-size: 1rem;
+        }
+        
+        .timer-text {
+            font-weight: 500;
+        }
+        
+        .countdown-timer {
+            display: flex;
+            gap: 4px;
+        }
+        
+        .countdown-number {
+            background: rgba(0, 0, 0, 0.3);
+            color: white;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-weight: 700;
+            font-size: 0.85rem;
+            min-width: 24px;
+            text-align: center;
+        }
+        
+        .flash-sale-pricing {
+            background: linear-gradient(to bottom, #FFF5F5 0%, #FFFFFF 100%);
+            padding: 16px;
+        }
+        
+        .price-main {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 8px;
+        }
+        
+        .current-price-flash {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--color-primary);
+            line-height: 1;
+        }
+        
+        .original-price-flash {
+            font-size: 1rem;
+            color: #999;
+            text-decoration: line-through;
+            font-weight: 400;
+        }
+        
+        .discount-percentage {
+            background: var(--color-primary);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+        
+        .savings-info {
+            color: var(--color-primary);
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+        
+        /* Responsivo para OFERTAS RELÂMPAGO */
+        @media (max-width: 767px) {
+            .flash-sale-header {
+                padding: 10px 12px;
+                flex-direction: column;
+                gap: 8px;
+                text-align: center;
+            }
+            
+            .flash-sale-title {
+                font-size: 0.8rem;
+            }
+            
+            .flash-sale-timer {
+                font-size: 0.75rem;
+                gap: 6px;
+            }
+            
+            .countdown-number {
+                padding: 2px 4px;
+                font-size: 0.75rem;
+                min-width: 20px;
+            }
+            
+            .current-price-flash {
+                font-size: 1.6rem;
+            }
+            
+            .price-main {
+                flex-wrap: wrap;
+                gap: 8px;
+            }
+        }
         
         /* INFO DO PRODUTO */
         .product-info .product-title {
@@ -820,16 +1034,31 @@ class AILandingPageGenerator {
                         <span class="sold-count">${productData.reviews || '500+'} Vendidos</span>
                         </div>
 
-                    <div class="pricing-section">
-                        <div class="price-row">
-                            ${productData.originalPrice ? `<span class="original-price">${productData.originalPrice}</span>` : ''}
-                            <span class="current-price">${productData.price}</span>
-                            ${discount ? `<span class="discount-badge">${discount}</span>` : ''}
+                    <!-- OFERTAS RELÂMPAGO - Layout igual à Shopee -->
+                    <div class="flash-sale-section">
+                        <div class="flash-sale-header">
+                            <span class="flash-sale-title">OFERTAS RELÂMPAGO</span>
+                            <div class="flash-sale-timer">
+                                <span class="timer-icon">⏰</span>
+                                <span class="timer-text">TERMINA EM</span>
+                                <div class="countdown-timer">
+                                    <span class="countdown-number" id="hours">01</span>
+                                    <span class="countdown-number" id="minutes">31</span>
+                                    <span class="countdown-number" id="seconds">10</span>
+                                </div>
+                            </div>
                         </div>
-                         ${savings ? `<div style="color: var(--color-primary); font-weight: 500; margin-top: 5px;">Você economiza ${savings}</div>` : ''}
+                        <div class="flash-sale-pricing">
+                            <div class="price-main">
+                                <span class="current-price-flash">${productData.price}</span>
+                                ${productData.originalPrice ? `<span class="original-price-flash">${productData.originalPrice}</span>` : ''}
+                                ${discount ? `<span class="discount-percentage">${discount}</span>` : ''}
+                            </div>
+                            ${savings ? `<div class="savings-info">Você economiza ${savings}</div>` : ''}
+                        </div>
                     </div>
 
-                    ${productData.variations?.colors ? `
+                    ${productData.variations?.colors && productData.variations.colors.length > 0 ? `
                     <div class="variations-section">
                         <span class="section-label">Cor:</span>
                             <div class="colors-grid">
@@ -839,7 +1068,7 @@ class AILandingPageGenerator {
                             </div>
                     </div>` : ''}
 
-                    ${productData.variations?.sizes ? `
+                    ${productData.variations?.sizes && productData.variations.sizes.length > 0 ? `
                     <div class="variations-section">
                         <span class="section-label">Tamanho:</span>
                         <div class="colors-grid">
@@ -957,6 +1186,46 @@ class AILandingPageGenerator {
             document.querySelectorAll('.product-thumbnail').forEach(thumb => thumb.classList.remove('active'));
             if (thumbnailElement) thumbnailElement.classList.add('active');
         }
+
+        // CONTADOR DE OFERTAS RELÂMPAGO - Funcionalidade igual à Shopee
+        function initFlashSaleTimer() {
+            // Definir tempo inicial (1 hora, 31 minutos, 10 segundos)
+            let totalSeconds = (1 * 3600) + (31 * 60) + 10;
+            
+            function updateTimer() {
+                const hours = Math.floor(totalSeconds / 3600);
+                const minutes = Math.floor((totalSeconds % 3600) / 60);
+                const seconds = totalSeconds % 60;
+                
+                // Atualizar elementos do DOM
+                const hoursElement = document.getElementById('hours');
+                const minutesElement = document.getElementById('minutes');
+                const secondsElement = document.getElementById('seconds');
+                
+                if (hoursElement) hoursElement.textContent = hours.toString().padStart(2, '0');
+                if (minutesElement) minutesElement.textContent = minutes.toString().padStart(2, '0');
+                if (secondsElement) secondsElement.textContent = seconds.toString().padStart(2, '0');
+                
+                // Decrementar contador
+                totalSeconds--;
+                
+                // Se chegou a zero, reiniciar o timer
+                if (totalSeconds < 0) {
+                    totalSeconds = (1 * 3600) + (31 * 60) + 10; // Reiniciar com 1h31m10s
+                }
+            }
+            
+            // Atualizar imediatamente
+            updateTimer();
+            
+            // Atualizar a cada segundo
+            setInterval(updateTimer, 1000);
+        }
+        
+        // Inicializar timer quando a página carregar
+        document.addEventListener('DOMContentLoaded', function() {
+            initFlashSaleTimer();
+        });
 
         // Variáveis globais para controlar seleções
         let selectedColor = '';
@@ -1190,9 +1459,23 @@ class AILandingPageGenerator {
   }
 
   private parsePrice(priceStr: string): number {
-      if(!priceStr) return 0;
-      return parseFloat(priceStr.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
-  }
+    if(!priceStr) return 0;
+    // Remove tudo exceto dígitos, vírgulas e pontos
+    let cleanPrice = priceStr.replace(/[^\d,.]/g, '');
+    
+    // Se tem ponto e vírgula, assume formato brasileiro (1.234,56)
+    if (cleanPrice.includes('.') && cleanPrice.includes(',')) {
+        // Remove pontos (separadores de milhares) e substitui vírgula por ponto
+        cleanPrice = cleanPrice.replace(/\./g, '').replace(',', '.');
+    }
+    // Se tem apenas vírgula, assume que é decimal brasileiro (1234,56)
+    else if (cleanPrice.includes(',') && !cleanPrice.includes('.')) {
+        cleanPrice = cleanPrice.replace(',', '.');
+    }
+    // Se tem apenas ponto, mantém como está (formato americano)
+    
+    return parseFloat(cleanPrice) || 0;
+}  
 
   private calculateDiscount(currentPriceStr: string, originalPriceStr?: string): string {
     if (!originalPriceStr) return '';
