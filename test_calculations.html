@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste de Cálculos</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .test-container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .result {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        input {
+            padding: 8px;
+            margin: 5px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        button {
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧮 Teste de Cálculos de Economia e Desconto</h1>
+    
+    <div class="test-container">
+        <h2>Teste Automático</h2>
+        <div id="auto-test-results"></div>
+    </div>
+    
+    <div class="test-container">
+        <h2>Teste Manual</h2>
+        <div>
+            <label>Preço Atual: <input type="text" id="current-price" value="R$ 149,90" placeholder="R$ 149,90"></label>
+        </div>
+        <div>
+            <label>Preço Original: <input type="text" id="original-price" value="R$ 199,90" placeholder="R$ 199,90"></label>
+        </div>
+        <button onclick="testManual()">Calcular</button>
+        <div id="manual-test-results"></div>
+    </div>
+
+    <script>
+        // Funções de cálculo (copiadas do React)
+        const calculateSavings = (currentPrice, originalPrice) => {
+            try {
+                console.log('🧮 Calculando economia:', { currentPrice, originalPrice });
+                
+                // Função para extrair valor numérico de preço brasileiro
+                const extractPrice = (price) => {
+                    // Remove tudo exceto números, vírgulas e pontos
+                    let cleanPrice = price.replace(/[^\d.,]/g, '');
+                    console.log('🔧 Preço limpo:', cleanPrice);
+                    
+                    // Se tem vírgula e ponto, assume formato brasileiro (1.234,56)
+                    if (cleanPrice.includes(',') && cleanPrice.includes('.')) {
+                        // Remove pontos (separadores de milhares) e substitui vírgula por ponto
+                        cleanPrice = cleanPrice.replace(/\./g, '').replace(',', '.');
+                    } else if (cleanPrice.includes(',')) {
+                        // Se só tem vírgula, substitui por ponto (formato brasileiro)
+                        cleanPrice = cleanPrice.replace(',', '.');
+                    }
+                    
+                    const numericValue = parseFloat(cleanPrice);
+                    console.log('🔢 Valor numérico extraído:', numericValue);
+                    return numericValue;
+                };
+                
+                const current = extractPrice(currentPrice);
+                const original = extractPrice(originalPrice);
+                
+                console.log('💰 Valores extraídos:', { current, original });
+                
+                if (isNaN(current) || isNaN(original) || original <= current) {
+                    console.log('❌ Valores inválidos para cálculo');
+                    return '';
+                }
+                
+                const savings = original - current;
+                const formattedSavings = `R$ ${savings.toFixed(2).replace('.', ',')}`;
+                
+                console.log('💸 Economia calculada:', formattedSavings);
+                return formattedSavings;
+            } catch (error) {
+                console.error('❌ Erro ao calcular economia:', error);
+                return '';
+            }
+        };
+        
+        const calculateDiscountPercentage = (currentPrice, originalPrice) => {
+            try {
+                console.log('🔥 Calculando desconto:', { currentPrice, originalPrice });
+                
+                // Função para extrair valor numérico de preço brasileiro
+                const extractPrice = (price) => {
+                    let cleanPrice = price.replace(/[^\d.,]/g, '');
+                    
+                    if (cleanPrice.includes(',') && cleanPrice.includes('.')) {
+                        cleanPrice = cleanPrice.replace(/\./g, '').replace(',', '.');
+                    } else if (cleanPrice.includes(',')) {
+                        cleanPrice = cleanPrice.replace(',', '.');
+                    }
+                    
+                    return parseFloat(cleanPrice);
+                };
+                
+                const current = extractPrice(currentPrice);
+                const original = extractPrice(originalPrice);
+                
+                console.log('💰 Valores para desconto:', { current, original });
+                
+                if (isNaN(current) || isNaN(original) || original <= current) {
+                    console.log('❌ Valores inválidos para cálculo de desconto');
+                    return '';
+                }
+                
+                const discountPercentage = ((original - current) / original) * 100;
+                const formattedDiscount = `${Math.round(discountPercentage)}% OFF`;
+                
+                console.log('🔥 Desconto calculado:', formattedDiscount);
+                return formattedDiscount;
+            } catch (error) {
+                console.error('❌ Erro ao calcular desconto:', error);
+                return '';
+            }
+        };
+
+        // Teste automático
+        function runAutoTests() {
+            const tests = [
+                {
+                    name: "Exemplo do usuário",
+                    current: "R$ 149,90",
+                    original: "R$ 199,90",
+                    expectedSavings: "R$ 50,00",
+                    expectedDiscount: "25% OFF"
+                },
+                {
+                    name: "Valores simples",
+                    current: "R$ 100,00",
+                    original: "R$ 200,00",
+                    expectedSavings: "R$ 100,00",
+                    expectedDiscount: "50% OFF"
+                },
+                {
+                    name: "Valores com centavos",
+                    current: "R$ 89,99",
+                    original: "R$ 119,99",
+                    expectedSavings: "R$ 30,00",
+                    expectedDiscount: "25% OFF"
+                }
+            ];
+
+            let results = '<h3>Resultados dos Testes Automáticos:</h3>';
+            
+            tests.forEach(test => {
+                const savings = calculateSavings(test.current, test.original);
+                const discount = calculateDiscountPercentage(test.current, test.original);
+                
+                const savingsMatch = savings === test.expectedSavings;
+                const discountMatch = discount === test.expectedDiscount;
+                
+                results += `
+                    <div class="result ${savingsMatch && discountMatch ? 'success' : 'error'}">
+                        <strong>${test.name}</strong><br>
+                        Preços: ${test.current} → ${test.original}<br>
+                        Economia: ${savings} (esperado: ${test.expectedSavings}) ${savingsMatch ? '✅' : '❌'}<br>
+                        Desconto: ${discount} (esperado: ${test.expectedDiscount}) ${discountMatch ? '✅' : '❌'}
+                    </div>
+                `;
+            });
+            
+            document.getElementById('auto-test-results').innerHTML = results;
+        }
+
+        // Teste manual
+        function testManual() {
+            const currentPrice = document.getElementById('current-price').value;
+            const originalPrice = document.getElementById('original-price').value;
+            
+            const savings = calculateSavings(currentPrice, originalPrice);
+            const discount = calculateDiscountPercentage(currentPrice, originalPrice);
+            
+            const results = `
+                <div class="result success">
+                    <strong>Resultados:</strong><br>
+                    Economia: ${savings}<br>
+                    Desconto: ${discount}
+                </div>
+            `;
+            
+            document.getElementById('manual-test-results').innerHTML = results;
+        }
+
+        // Executar testes automáticos ao carregar a página
+        window.onload = runAutoTests;
+    </script>
+</body>
+</html>

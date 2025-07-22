@@ -54,39 +54,101 @@ const CreateLandingPage = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
+  // Debounce para evitar muitas atualizações
+  const [debounceTimer, setDebounceTimer] = useState<NodeJS.Timeout | null>(null);
+  const [isUpdatingPreview, setIsUpdatingPreview] = useState(false);
+
+  // Cleanup do debounce timer
+  useEffect(() => {
+    return () => {
+      if (debounceTimer) {
+        clearTimeout(debounceTimer);
+      }
+    };
+  }, [debounceTimer]);
+
+
+
   // Funções de cálculo corretas
   const calculateSavings = (currentPrice: string, originalPrice: string): string => {
     try {
-      // Extrair valores numéricos dos preços
-      const current = parseFloat(currentPrice.replace(/[^\d.,]/g, '').replace(',', '.'));
-      const original = parseFloat(originalPrice.replace(/[^\d.,]/g, '').replace(',', '.'));
-      
+      console.log('🧮 Calculando economia:', { currentPrice, originalPrice });
+
+      // Função para extrair valor numérico de preço brasileiro
+      const extractPrice = (price: string): number => {
+        // Remove tudo exceto números, vírgulas e pontos
+        let cleanPrice = price.replace(/[^\d.,]/g, '');
+        console.log('🔧 Preço limpo:', cleanPrice);
+
+        // Se tem vírgula e ponto, assume formato brasileiro (1.234,56)
+        if (cleanPrice.includes(',') && cleanPrice.includes('.')) {
+          // Remove pontos (separadores de milhares) e substitui vírgula por ponto
+          cleanPrice = cleanPrice.replace(/\./g, '').replace(',', '.');
+        } else if (cleanPrice.includes(',')) {
+          // Se só tem vírgula, substitui por ponto (formato brasileiro)
+          cleanPrice = cleanPrice.replace(',', '.');
+        }
+
+        const numericValue = parseFloat(cleanPrice);
+        console.log('🔢 Valor numérico extraído:', numericValue);
+        return numericValue;
+      };
+
+      const current = extractPrice(currentPrice);
+      const original = extractPrice(originalPrice);
+
+      console.log('💰 Valores extraídos:', { current, original });
+
       if (isNaN(current) || isNaN(original) || original <= current) {
+        console.log('❌ Valores inválidos para cálculo');
         return '';
       }
-      
+
       const savings = original - current;
-      return `R$ ${savings.toFixed(2).replace('.', ',')}`;
+      const formattedSavings = `R$ ${savings.toFixed(2).replace('.', ',')}`;
+
+      console.log('💸 Economia calculada:', formattedSavings);
+      return formattedSavings;
     } catch (error) {
-      console.error('Erro ao calcular economia:', error);
+      console.error('❌ Erro ao calcular economia:', error);
       return '';
     }
   };
-  
+
   const calculateDiscountPercentage = (currentPrice: string, originalPrice: string): string => {
     try {
-      // Extrair valores numéricos dos preços
-      const current = parseFloat(currentPrice.replace(/[^\d.,]/g, '').replace(',', '.'));
-      const original = parseFloat(originalPrice.replace(/[^\d.,]/g, '').replace(',', '.'));
-      
+      console.log('🔥 Calculando desconto:', { currentPrice, originalPrice });
+
+      // Função para extrair valor numérico de preço brasileiro
+      const extractPrice = (price: string): number => {
+        let cleanPrice = price.replace(/[^\d.,]/g, '');
+
+        if (cleanPrice.includes(',') && cleanPrice.includes('.')) {
+          cleanPrice = cleanPrice.replace(/\./g, '').replace(',', '.');
+        } else if (cleanPrice.includes(',')) {
+          cleanPrice = cleanPrice.replace(',', '.');
+        }
+
+        return parseFloat(cleanPrice);
+      };
+
+      const current = extractPrice(currentPrice);
+      const original = extractPrice(originalPrice);
+
+      console.log('💰 Valores para desconto:', { current, original });
+
       if (isNaN(current) || isNaN(original) || original <= current) {
+        console.log('❌ Valores inválidos para cálculo de desconto');
         return '';
       }
-      
+
       const discountPercentage = ((original - current) / original) * 100;
-      return `${Math.round(discountPercentage)}% OFF`;
+      const formattedDiscount = `${Math.round(discountPercentage)}% OFF`;
+
+      console.log('🔥 Desconto calculado:', formattedDiscount);
+      return formattedDiscount;
     } catch (error) {
-      console.error('Erro ao calcular desconto:', error);
+      console.error('❌ Erro ao calcular desconto:', error);
       return '';
     }
   };
@@ -149,7 +211,7 @@ const CreateLandingPage = () => {
         setEditorSettings(prev => ({
           ...prev,
           title: result.data?.name || '',
-          subtitle: 'Produto de alta qualidade com o melhor custo-benefício',
+          subtitle: 'Elegância, conforto e qualidade premium em cada passo',
           currentPrice: result.data?.price || '',
           originalPrice: result.data?.originalPrice || ''
         }));
@@ -276,27 +338,38 @@ const CreateLandingPage = () => {
 
   // Estado para forçar re-render do preview
   const [previewKey, setPreviewKey] = useState(0);
-  
+
   // Funções do editor
   const updateEditorSetting = (key: string, value: string) => {
     console.log(`🔄 Atualizando configuração: ${key} = ${value}`);
-    
+
     setEditorSettings(prev => {
       const newSettings = {
         ...prev,
         [key]: value
       };
       console.log('📋 Novas configurações do editor:', newSettings);
-      
-      // Aplicar alterações imediatamente após atualizar o estado
+
+      // Aplicar alterações em tempo real com debounce
       if (generatedPage) {
-        console.log('🔄 Agendando aplicação de alterações com novas configurações...');
-        setTimeout(() => {
-          console.log('🔧 Aplicando alterações com:', newSettings);
+        // Mostrar indicador de atualização
+        setIsUpdatingPreview(true);
+
+        // Limpar timer anterior se existir
+        if (debounceTimer) {
+          clearTimeout(debounceTimer);
+        }
+
+        // Criar novo timer para aplicar alterações após 300ms
+        const newTimer = setTimeout(() => {
+          console.log('🔧 Aplicando alterações em tempo real com:', newSettings);
           applyEditorChangesWithNewSettings(newSettings);
-        }, 100);
+          setIsUpdatingPreview(false);
+        }, 300);
+
+        setDebounceTimer(newTimer);
       }
-      
+
       return newSettings;
     });
   };
@@ -650,12 +723,21 @@ const CreateLandingPage = () => {
       }
       
       // 7. Atualizar economia e desconto se ambos os preços estiverem definidos
-      const currentPriceForCalc = editorSettings.currentPrice || extractedProduct.price || '';
-      const originalPriceForCalc = editorSettings.originalPrice || extractedProduct.originalPrice || '';
-      
-      console.log('💰 Calculando economia e desconto:', {
+      // CORREÇÃO: Usar sempre os valores dos campos de entrada se disponíveis
+      const currentPriceForCalc = editorSettings.currentPrice && editorSettings.currentPrice.trim()
+        ? editorSettings.currentPrice
+        : extractedProduct.price || '';
+      const originalPriceForCalc = editorSettings.originalPrice && editorSettings.originalPrice.trim()
+        ? editorSettings.originalPrice
+        : extractedProduct.originalPrice || '';
+
+      console.log('💰 Calculando economia e desconto (CORRIGIDO - OLD):', {
         currentPrice: currentPriceForCalc,
-        originalPrice: originalPriceForCalc
+        originalPrice: originalPriceForCalc,
+        settingsCurrentPrice: editorSettings.currentPrice,
+        settingsOriginalPrice: editorSettings.originalPrice,
+        extractedCurrentPrice: extractedProduct.price,
+        extractedOriginalPrice: extractedProduct.originalPrice
       });
       
       if (currentPriceForCalc && originalPriceForCalc) {
@@ -1531,6 +1613,15 @@ const CreateLandingPage = () => {
                       <CardDescription>
                         Customize sua landing page em tempo real
                       </CardDescription>
+                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mt-3">
+                        <div className="flex items-center gap-2 text-blue-700 text-sm">
+                          <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                          <span className="font-medium">Preview em Tempo Real Ativo</span>
+                        </div>
+                        <p className="text-blue-600 text-xs mt-1">
+                          Suas alterações aparecem automaticamente no preview
+                        </p>
+                      </div>
                     </CardHeader>
                     <CardContent className="space-y-6">
                       {/* Cores da Landing Page */}
@@ -1559,8 +1650,6 @@ const CreateLandingPage = () => {
                                   e.stopPropagation();
                                   console.log('🎨 Clicando na cor:', colorOption.color);
                                   updateEditorSetting('primaryColor', colorOption.color);
-                                  // Aplicar imediatamente
-                                  setTimeout(() => applyEditorChanges(), 100);
                                 }}
                                 title={colorOption.name}
                               />
@@ -1573,7 +1662,6 @@ const CreateLandingPage = () => {
                               onChange={(e) => {
                                 console.log('🎨 Mudando cor via picker:', e.target.value);
                                 updateEditorSetting('primaryColor', e.target.value);
-                                setTimeout(() => applyEditorChanges(), 100);
                               }}
                               className="w-16 h-10 p-1 border rounded"
                             />
@@ -1586,9 +1674,6 @@ const CreateLandingPage = () => {
                                 if (hexRegex.test(e.target.value) || e.target.value === '') {
                                   console.log('🎨 Mudando cor via texto:', e.target.value);
                                   updateEditorSetting('primaryColor', e.target.value);
-                                  if (hexRegex.test(e.target.value)) {
-                                    setTimeout(() => applyEditorChanges(), 100);
-                                  }
                                 }
                               }}
                               placeholder="#667eea"
@@ -1683,17 +1768,6 @@ const CreateLandingPage = () => {
                         />
                       </div>
                       
-                      {/* Aplicar mudanças */}
-                      <Button 
-                        onClick={applyEditorChanges} 
-                        className="w-full" 
-                        disabled={!generatedPage}
-                        size="sm"
-                      >
-                        <Palette className="mr-2 h-4 w-4" />
-                        Aplicar Alterações
-                      </Button>
-                      
                       {/* Reset */}
                       <Button 
                         variant="outline" 
@@ -1736,8 +1810,16 @@ const CreateLandingPage = () => {
                               title="Landing Page Preview"
                               onLoad={() => console.log('🖼️ Preview carregado!')}
                             />
-                            <div className="absolute top-2 right-2 bg-black/70 text-white px-2 py-1 rounded text-xs">
-                              Preview ao vivo
+                            <div className="absolute top-2 right-2 flex gap-2">
+                              <div className="bg-black/70 text-white px-2 py-1 rounded text-xs">
+                                Preview ao vivo
+                              </div>
+                              {isUpdatingPreview && (
+                                <div className="bg-blue-500 text-white px-2 py-1 rounded text-xs flex items-center gap-1">
+                                  <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
+                                  Atualizando...
+                                </div>
+                              )}
                             </div>
                           </div>
                         ) : (

@@ -89,75 +89,115 @@ class AILandingPageGenerator {
     const description = (productData.description || '').toLowerCase();
     const name = (productData.name || '').toLowerCase();
     const benefits: string[] = [];
-    
-    // Palavras-chave para diferentes tipos de benefícios
-    const qualityKeywords = ['premium', 'qualidade', 'alta qualidade', 'superior', 'excelente', 'resistente', 'durável', 'duradouro'];
-    const comfortKeywords = ['conforto', 'confortável', 'macio', 'ergonômico', 'suave', 'flexível'];
-    const designKeywords = ['design', 'estilo', 'elegante', 'moderno', 'bonito', 'atraente', 'visual'];
-    const functionalityKeywords = ['funcional', 'prático', 'útil', 'versátil', 'multifuncional', 'eficiente'];
-    const technologyKeywords = ['tecnologia', 'avançado', 'inovador', 'inteligente', 'digital', 'smart'];
-    const safetyKeywords = ['seguro', 'segurança', 'proteção', 'protegido', 'antiderrapante', 'resistente'];
-    const batteryKeywords = ['bateria', 'energia', 'duração', 'autonomia', 'carregamento'];
-    const materialKeywords = ['material', 'tecido', 'couro', 'algodão', 'silicone', 'metal', 'plástico'];
-    
-    // Analisar descrição e nome do produto
     const fullText = `${description} ${name}`;
-    
-    // Gerar benefícios baseados nas palavras-chave encontradas
-    if (this.containsAnyKeyword(fullText, qualityKeywords)) {
-      benefits.push('🔥 Qualidade premium que supera expectativas');
+
+    // Detectar tipo de produto
+    const isShoe = name.includes('sapato') || name.includes('tenis') || name.includes('sandalia') || name.includes('chinelo') || name.includes('oxford') || name.includes('mocassim');
+    const isSocialShoe = isShoe && (fullText.includes('social') || fullText.includes('elegante') || fullText.includes('formal') || fullText.includes('oxford') || fullText.includes('mocassim'));
+
+    // Benefícios específicos para sapatos sociais/elegantes
+    if (isSocialShoe) {
+      // Benefícios baseados na descrição real
+      if (fullText.includes('couro') || fullText.includes('sintético')) {
+        benefits.push('👔 Material premium que transmite elegância e sofisticação');
+      }
+
+      if (fullText.includes('hidrofóbico') || fullText.includes('água') || fullText.includes('resistente')) {
+        benefits.push('💧 Proteção contra água e sujeira - sempre impecável');
+      }
+
+      if (fullText.includes('microfibra') || fullText.includes('antibacteriano') || fullText.includes('bactéria')) {
+        benefits.push('🦠 Tecnologia antibacteriana que elimina odores');
+      }
+
+      if (fullText.includes('eva') || fullText.includes('palmilha') || fullText.includes('conforto')) {
+        benefits.push('☁️ Palmilha EVA que se adapta ao seu pé - conforto o dia todo');
+      }
+
+      if (fullText.includes('postura') || fullText.includes('imponente') || fullText.includes('confiança')) {
+        benefits.push('💪 Postura imponente que aumenta sua confiança profissional');
+      }
+
+      if (fullText.includes('pvc') || fullText.includes('resistente') || fullText.includes('durável')) {
+        benefits.push('🛡️ Solado ultra-resistente que dura anos');
+      }
+
+      // Benefícios adicionais específicos para sapatos sociais
+      if (benefits.length < 5) {
+        const additionalBenefits = [
+          '✨ Design moderno que impressiona em qualquer ambiente',
+          '🎯 Perfeito para reuniões, eventos e ocasiões especiais',
+          '⚡ Fácil de limpar e manter sempre novo',
+          '📏 Tabela de medidas precisa para ajuste perfeito',
+          '🏆 Qualidade premium com garantia de satisfação'
+        ];
+
+        additionalBenefits.forEach(benefit => {
+          if (benefits.length < 5) {
+            benefits.push(benefit);
+          }
+        });
+      }
+    } else if (isShoe) {
+      // Benefícios para outros tipos de calçados
+      if (fullText.includes('conforto') || fullText.includes('macio')) {
+        benefits.push('😌 Conforto excepcional para uso prolongado');
+      }
+
+      if (fullText.includes('design') || fullText.includes('estilo')) {
+        benefits.push('✨ Design moderno que combina com qualquer look');
+      }
+
+      if (fullText.includes('resistente') || fullText.includes('durável')) {
+        benefits.push('💪 Durabilidade superior que resiste ao uso diário');
+      }
+
+      if (fullText.includes('leve') || fullText.includes('peso')) {
+        benefits.push('⚡ Leveza que você sente a cada passo');
+      }
+
+      if (fullText.includes('flexível') || fullText.includes('movimento')) {
+        benefits.push('🤸 Flexibilidade total para seus movimentos');
+      }
+    } else {
+      // Benefícios genéricos para outros produtos
+      const qualityKeywords = ['premium', 'qualidade', 'alta qualidade', 'superior', 'excelente', 'resistente', 'durável'];
+      const comfortKeywords = ['conforto', 'confortável', 'macio', 'ergonômico', 'suave', 'flexível'];
+      const designKeywords = ['design', 'estilo', 'elegante', 'moderno', 'bonito', 'atraente'];
+      const functionalityKeywords = ['funcional', 'prático', 'útil', 'versátil', 'multifuncional'];
+      const technologyKeywords = ['tecnologia', 'avançado', 'inovador', 'inteligente', 'smart'];
+
+      if (this.containsAnyKeyword(fullText, qualityKeywords)) {
+        benefits.push('🔥 Qualidade premium que supera expectativas');
+      }
+
+      if (this.containsAnyKeyword(fullText, comfortKeywords)) {
+        benefits.push('😌 Conforto excepcional para uso prolongado');
+      }
+
+      if (this.containsAnyKeyword(fullText, designKeywords)) {
+        benefits.push('✨ Design moderno que impressiona');
+      }
+
+      if (this.containsAnyKeyword(fullText, functionalityKeywords)) {
+        benefits.push('🎯 Funcionalidade que você realmente precisa');
+      }
+
+      if (this.containsAnyKeyword(fullText, technologyKeywords)) {
+        benefits.push('🚀 Tecnologia avançada de última geração');
+      }
     }
-    
-    if (this.containsAnyKeyword(fullText, comfortKeywords)) {
-      benefits.push('😌 Conforto excepcional para uso prolongado');
-    }
-    
-    if (this.containsAnyKeyword(fullText, designKeywords)) {
-      benefits.push('✨ Design moderno que impressiona');
-    }
-    
-    if (this.containsAnyKeyword(fullText, functionalityKeywords)) {
-      benefits.push('🎯 Funcionalidade que você realmente precisa');
-    }
-    
-    if (this.containsAnyKeyword(fullText, technologyKeywords)) {
-      benefits.push('🚀 Tecnologia avançada de última geração');
-    }
-    
-    if (this.containsAnyKeyword(fullText, safetyKeywords)) {
-      benefits.push('🛡️ Segurança e proteção garantidas');
-    }
-    
-    if (this.containsAnyKeyword(fullText, batteryKeywords)) {
-      benefits.push('🔋 Bateria de longa duração');
-    }
-    
-    if (this.containsAnyKeyword(fullText, materialKeywords)) {
-      benefits.push('💪 Materiais de primeira linha');
-    }
-    
-    // Benefícios específicos baseados em características mencionadas
-    if (fullText.includes('água') || fullText.includes('impermeável')) {
-      benefits.push('💧 Resistente à água');
-    }
-    
-    if (fullText.includes('leve') || fullText.includes('peso')) {
-      benefits.push('⚡ Leveza que você sente');
-    }
-    
-    if (fullText.includes('fácil') || fullText.includes('simples')) {
-      benefits.push('👌 Fácil de usar e configurar');
-    }
-    
-    if (fullText.includes('rápido') || fullText.includes('velocidade')) {
-      benefits.push('⚡ Performance rápida e eficiente');
-    }
-    
+
+    // Benefícios universais baseados em características específicas
     if (fullText.includes('garantia')) {
-      benefits.push('✅ Garantia de qualidade assegurada');
+      benefits.push('✅ Garantia de qualidade e satisfação');
     }
-    
-    // Se não encontrou benefícios específicos, usar benefícios genéricos mas relevantes
+
+    if (fullText.includes('entrega') || fullText.includes('envio')) {
+      benefits.push('🚚 Entrega rápida e segura em todo Brasil');
+    }
+
+    // Se ainda não tem benefícios suficientes, adicionar genéricos relevantes
     if (benefits.length === 0) {
       benefits.push(
         '🔥 Qualidade premium que faz a diferença',
@@ -167,7 +207,7 @@ class AILandingPageGenerator {
         '💰 Melhor custo-benefício do mercado'
       );
     }
-    
+
     // Limitar a 5 benefícios para não sobrecarregar
     return benefits.slice(0, 5);
   }
@@ -275,28 +315,38 @@ class AILandingPageGenerator {
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --color-primary: #EE4D2D; /* Cor laranja Shopee */
+            --color-primary: #EE4D2D; /* Cor laranja oficial da Shopee */
             --color-primary-dark: #D73210;
             --color-secondary: #00BFA5; /* Verde para destacar botões/garantia */
-            --color-text: #333333;
-            --color-text-light: #666666;
-            --color-background: #F5F5F5;
+            --color-text: #222222; /* Texto mais escuro como na Shopee */
+            --color-text-light: #757575; /* Cinza mais claro */
+            --color-background: #F5F5F5; /* Fundo cinza claro da Shopee */
             --color-white: #FFFFFF;
-            --color-border: #E0E0E0;
-            --font-family: 'Roboto', sans-serif;
-            --shadow-sm: 0 1px 3px rgba(0,0,0,0.05);
-            --shadow-md: 0 4px 10px rgba(0,0,0,0.08);
-            --border-radius: 8px;
+            --color-border: #E5E5E5; /* Bordas mais suaves */
+            --color-card-bg: #FFFFFF; /* Fundo dos cards */
+            --color-discount: #FF424F; /* Cor de desconto da Shopee */
+            --font-family: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+            --shadow-md: 0 2px 8px rgba(0,0,0,0.1);
+            --shadow-lg: 0 4px 16px rgba(0,0,0,0.15);
+            --border-radius: 4px; /* Bordas menos arredondadas como na Shopee */
         }
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { 
+        body {
             font-family: var(--font-family);
-            line-height: 1.6; 
+            line-height: 1.5;
             color: var(--color-text);
             background-color: var(--color-background);
-            font-size: 16px;
+            font-size: 14px; /* Fonte menor como na Shopee */
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
         }
-        .container { max-width: 1200px; margin: 0 auto; padding: 24px 16px; }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0; /* Sem padding para ficar igual à Shopee */
+            background-color: var(--color-background);
+        }
         
         /* BARRA DE URGÊNCIA */
         .urgency-bar {
@@ -309,19 +359,29 @@ class AILandingPageGenerator {
         }
         .urgency-bar #countdown { font-weight: 700; margin: 0 5px; }
 
-        /* SEÇÃO PRINCIPAL DO PRODUTO (GRID) */
-        .product-section { padding-top: 30px; }
+        /* SEÇÃO PRINCIPAL DO PRODUTO (GRID) - Estilo Shopee */
+        .product-section {
+            padding-top: 0; /* Remover padding superior */
+            background-color: var(--color-background);
+        }
         .product-grid {
             display: grid;
             grid-template-columns: 1fr;
-            gap: 30px;
+            gap: 20px; /* Gap menor como na Shopee */
             background-color: var(--color-white);
-            padding: 24px;
-            border-radius: var(--border-radius);
-            box-shadow: var(--shadow-md);
+            padding: 20px; /* Padding menor */
+            border-radius: 0; /* Shopee não usa bordas arredondadas */
+            box-shadow: none; /* Shopee usa sombras mais sutis */
+            border: 1px solid var(--color-border);
+            margin: 0 16px; /* Margem lateral */
         }
         @media (min-width: 768px) {
-            .product-grid { grid-template-columns: 4fr 5fr; gap: 40px; }
+            .product-grid {
+                grid-template-columns: 4fr 5fr;
+                gap: 24px;
+                margin: 0 auto;
+                max-width: 1200px;
+            }
         }
 
         /* RESPONSIVO MOBILE */
@@ -461,19 +521,21 @@ class AILandingPageGenerator {
         }
         
         .flash-sale-header {
-            background: linear-gradient(135deg, #EE4D2D 0%, #FF6B35 100%);
+            background: var(--color-primary); /* Cor sólida como na Shopee */
             color: white;
-            padding: 12px 16px;
+            padding: 8px 12px; /* Padding menor */
             display: flex;
             justify-content: space-between;
             align-items: center;
             font-weight: 600;
+            font-size: 12px; /* Fonte menor como na Shopee */
         }
-        
+
         .flash-sale-title {
-            font-size: 0.9rem;
-            font-weight: 700;
-            letter-spacing: 0.5px;
+            font-size: 12px; /* Fonte menor */
+            font-weight: 600; /* Peso menor */
+            letter-spacing: 0.3px;
+            text-transform: uppercase;
         }
         
         .flash-sale-timer {
@@ -520,26 +582,26 @@ class AILandingPageGenerator {
         }
         
         .current-price-flash {
-            font-size: 2rem;
-            font-weight: 700;
+            font-size: 1.75rem; /* Fonte menor como na Shopee */
+            font-weight: 600; /* Peso menor */
             color: var(--color-primary);
             line-height: 1;
         }
-        
+
         .original-price-flash {
-            font-size: 1rem;
-            color: #999;
+            font-size: 0.9rem; /* Fonte menor */
+            color: #999999; /* Cor mais clara */
             text-decoration: line-through;
             font-weight: 400;
         }
-        
+
         .discount-percentage {
-            background: var(--color-primary);
+            background: var(--color-discount); /* Usar cor específica de desconto */
             color: white;
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 0.8rem;
-            font-weight: 600;
+            padding: 2px 6px; /* Padding menor */
+            border-radius: 2px; /* Bordas menos arredondadas */
+            font-size: 0.75rem; /* Fonte menor */
+            font-weight: 500;
         }
         
         .savings-info {
@@ -582,12 +644,14 @@ class AILandingPageGenerator {
             }
         }
         
-        /* INFO DO PRODUTO */
+        /* INFO DO PRODUTO - Estilo Shopee */
         .product-info .product-title {
-            font-size: 1.5rem; /* Fonte menor */
-            font-weight: 500;
-            line-height: 1.3;
-            margin-bottom: 12px;
+            font-size: 1.25rem; /* Fonte similar à Shopee */
+            font-weight: 400; /* Peso normal como na Shopee */
+            line-height: 1.4;
+            margin-bottom: 8px; /* Margem menor */
+            color: var(--color-text);
+            word-wrap: break-word;
         }
         .product-rating {
             display: flex;
@@ -631,15 +695,16 @@ class AILandingPageGenerator {
             font-weight: 700;
         }
         
-        /* VARIAÇÕES */
-        .variations-section { margin-bottom: 24px; }
-                .section-label { 
-            font-weight: 500; 
-            margin-bottom: 12px; 
-            display: block; 
-            color: var(--color-text-light); 
+        /* VARIAÇÕES - Estilo Shopee */
+        .variations-section { margin-bottom: 20px; }
+        .section-label {
+            font-weight: 400; /* Peso menor como na Shopee */
+            margin-bottom: 8px; /* Margem menor */
+            display: block;
+            color: var(--color-text); /* Cor mais escura */
+            font-size: 0.85rem; /* Fonte menor */
         }
-        .colors-grid { display: flex; flex-wrap: wrap; gap: 10px; }
+        .colors-grid { display: flex; flex-wrap: wrap; gap: 8px; /* Gap menor */ }
         .color-choice {
             padding: 8px 16px;
             border: 1px solid var(--color-border);
@@ -734,21 +799,26 @@ class AILandingPageGenerator {
             color: var(--color-white);
         }
         
-        /* BOTÕES DE AÇÃO (CTA) */
-        .cta-section { display: flex; flex-direction: column; gap: 12px; }
+        /* BOTÕES DE AÇÃO (CTA) - Estilo Shopee */
+        .cta-section { display: flex; flex-direction: column; gap: 8px; }
         .main-buy-button {
             background-color: var(--color-primary);
             color: var(--color-white);
-            border: 1px solid var(--color-primary);
-            padding: 14px 24px;
-            border-radius: var(--border-radius);
-            font-size: 1.1rem;
-            font-weight: 700;
+            border: none; /* Shopee não usa bordas nos botões principais */
+            padding: 12px 20px; /* Padding menor */
+            border-radius: 2px; /* Bordas menos arredondadas */
+            font-size: 0.9rem; /* Fonte menor */
+            font-weight: 500; /* Peso menor */
             cursor: pointer;
-            transition: background-color 0.2s ease;
-            text-transform: uppercase;
+            transition: all 0.2s ease;
+            text-transform: none; /* Shopee não usa uppercase */
+            width: 100%;
+            box-shadow: 0 1px 3px rgba(238, 77, 45, 0.3);
         }
-        .main-buy-button:hover { background-color: var(--color-primary-dark); }
+        .main-buy-button:hover {
+            background-color: var(--color-primary-dark);
+            box-shadow: 0 2px 6px rgba(238, 77, 45, 0.4);
+        }
         
         /* ESTOQUE E GARANTIA */
         .stock-info {
@@ -776,13 +846,18 @@ class AILandingPageGenerator {
         }
         .guarantee-info .icon { color: var(--color-secondary); font-size: 1.2rem; }
 
-        /* SEÇÕES DE CONTEÚDO ADICIONAL */
+        /* SEÇÕES DE CONTEÚDO ADICIONAL - Estilo Shopee */
         .content-section {
             background: var(--color-white);
-            margin-top: 30px;
-            padding: 24px;
-            border-radius: var(--border-radius);
-            box-shadow: var(--shadow-sm);
+            margin: 16px; /* Margem lateral como na Shopee */
+            margin-top: 16px;
+            padding: 20px; /* Padding menor */
+            border-radius: 0; /* Shopee não usa bordas arredondadas */
+            box-shadow: none; /* Shopee usa sombras mais sutis */
+            border: 1px solid var(--color-border);
+            max-width: 1200px;
+            margin-left: auto;
+            margin-right: auto;
         }
         .section-title {
             font-size: 1.4rem;
@@ -832,6 +907,74 @@ class AILandingPageGenerator {
         .product-description strong {
             color: var(--color-primary);
             font-weight: 600;
+        }
+
+        /* SEÇÕES ESPECIAIS DA DESCRIÇÃO */
+        .product-intro {
+            background: linear-gradient(135deg, var(--color-primary), #667eea);
+            color: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 25px;
+            text-align: center;
+        }
+        .product-intro p {
+            margin-bottom: 10px;
+        }
+        .product-intro strong {
+            color: white;
+            font-size: 1.1rem;
+        }
+
+        .feature-list li {
+            background: #f8f9fa;
+            padding: 12px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            border-left: 4px solid var(--color-primary);
+        }
+
+        .benefits-list li {
+            background: linear-gradient(90deg, #e8f5e8, #f0f8f0);
+            padding: 12px;
+            margin-bottom: 8px;
+            border-radius: 8px;
+            border-left: 3px solid #28a745;
+        }
+
+        .size-guide {
+            background: #fff3cd;
+            padding: 20px;
+            border-radius: 10px;
+            border: 1px solid #ffeaa7;
+            margin: 20px 0;
+        }
+        .size-table {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+            font-family: monospace;
+            font-size: 0.9rem;
+        }
+
+        .faq-section {
+            margin-top: 20px;
+        }
+        .faq-item {
+            background: #f8f9fa;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 8px;
+            border-left: 4px solid var(--color-primary);
+        }
+        .faq-item p:first-child {
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+        .faq-item p:last-child {
+            margin-bottom: 0;
+            color: #666;
         }
 
         /* AVALIAÇÕES DO PRODUTO */
@@ -1001,9 +1144,37 @@ class AILandingPageGenerator {
 </head>
 <body>
 
+    <!-- Barra superior estilo Shopee -->
     <div class="urgency-bar">
         ${copyData.urgencia} <span id="countdown">23:59:45</span>
     </div>
+
+    <!-- Header estilo Shopee -->
+    <header style="background: var(--color-white); border-bottom: 1px solid var(--color-border); padding: 12px 0;">
+        <div style="max-width: 1200px; margin: 0 auto; padding: 0 16px; display: flex; align-items: center; justify-content: space-between;">
+            <div style="display: flex; align-items: center; gap: 16px;">
+                <div style="color: var(--color-primary); font-size: 1.5rem; font-weight: 700;">Shopee</div>
+                <div style="color: var(--color-text-light); font-size: 0.9rem;">Produto Original</div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 12px; font-size: 0.85rem; color: var(--color-text-light);">
+                <span>🛡️ Compra Garantida</span>
+                <span>🚚 Frete Grátis</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Breadcrumb estilo Shopee -->
+    <nav style="background: var(--color-background); padding: 8px 0; border-bottom: 1px solid var(--color-border);">
+        <div style="max-width: 1200px; margin: 0 auto; padding: 0 16px;">
+            <div style="font-size: 0.8rem; color: var(--color-text-light);">
+                <span>Shopee</span>
+                <span style="margin: 0 8px;">></span>
+                <span>${productData.category || 'Produtos'}</span>
+                <span style="margin: 0 8px;">></span>
+                <span style="color: var(--color-text);">${productData.name}</span>
+            </div>
+        </div>
+    </nav>
 
     <main class="container">
         <section class="product-section">
@@ -1511,92 +1682,167 @@ class AILandingPageGenerator {
 
   private formatProductDescription(description: string): string {
     if (!description) return '';
-    
-    // Limpar e formatar a descrição
-    let formatted = description
-      // Remover textos de atenção repetidos sobre direitos autorais
-      .replace(/\*\*\*\*ATENÇÃO\*\*\*\*[\s\S]*?\*\*\*\*ATENÇÃO\*\*\*\*/g, '')
-      // Remover avisos sobre cores sortidas repetidos
-      .replace(/\*ATENÇÃO[^*]*\*/g, '')
-      // Quebrar em parágrafos
-      .split('\n')
-      .filter(line => line.trim().length > 0)
-      .map(line => line.trim())
-      .join('\n');
 
-    // Dividir em seções
-    const lines = formatted.split('\n');
+    // Limpar a descrição
+    let cleaned = description
+      .replace(/\*\*\*\*ATENÇÃO\*\*\*\*[\s\S]*?\*\*\*\*ATENÇÃO\*\*\*\*/g, '')
+      .replace(/\*ATENÇÃO[^*]*\*/g, '')
+      .replace(/ATENÇÃO!/g, '')
+      .trim();
+
+    // Detectar se é um sapato/calçado
+    const isShoe = cleaned.toLowerCase().includes('sapato') ||
+                   cleaned.toLowerCase().includes('calçado') ||
+                   cleaned.toLowerCase().includes('couro') ||
+                   cleaned.toLowerCase().includes('palmilha') ||
+                   cleaned.toLowerCase().includes('solado');
+
+    if (isShoe) {
+      return this.formatShoeDescription(cleaned);
+    } else {
+      return this.formatGenericDescription(cleaned);
+    }
+  }
+
+  private formatShoeDescription(description: string): string {
+    let html = '';
+
+    // Introdução persuasiva
+    html += `<div class="product-intro">
+      <p><strong>🎯 Transforme sua presença e confiança com este sapato excepcional!</strong></p>
+      <p>Desenvolvido para homens que valorizam elegância, conforto e qualidade premium em cada detalhe.</p>
+    </div>`;
+
+    // Extrair características técnicas
+    const features = this.extractShoeFeatures(description);
+
+    if (features.length > 0) {
+      html += `<h3>🔥 Principais Características e Diferenciais:</h3>
+      <ul class="feature-list">`;
+
+      features.forEach(feature => {
+        html += `<li><strong>${feature.title}</strong> – ${feature.description}</li>`;
+      });
+
+      html += `</ul>`;
+    }
+
+    // Seção de benefícios
+    html += `<h3>✨ Por que escolher este sapato?</h3>
+    <ul class="benefits-list">
+      <li><strong>💼 Versatilidade Total:</strong> Perfeito para trabalho, eventos sociais e ocasiões especiais</li>
+      <li><strong>☁️ Conforto Incomparável:</strong> Use o dia todo sem desconforto</li>
+      <li><strong>🛡️ Durabilidade Superior:</strong> Investimento que dura anos</li>
+      <li><strong>👔 Elegância Garantida:</strong> Destaque-se em qualquer ambiente</li>
+    </ul>`;
+
+    // Tabela de medidas se mencionada
+    if (description.includes('Tabela') || description.includes('medidas') || description.includes('cm')) {
+      html += this.extractSizeTable(description);
+    }
+
+    // FAQ se mencionado
+    if (description.includes('Perguntas') || description.includes('original') || description.includes('garantia')) {
+      html += this.extractFAQ(description);
+    }
+
+    return html;
+  }
+
+  private formatGenericDescription(description: string): string {
+    // Formatação genérica para outros produtos
+    const lines = description.split('\n').filter(line => line.trim().length > 0);
     let html = '';
     let currentSection = '';
 
     for (let line of lines) {
-      // Detectar títulos/seções (linhas em maiúscula ou com características específicas)
-      if (line.includes('Detalhes do Produto') || line.includes('Descrição do produto')) {
-        if (currentSection) html += `<p>${currentSection}</p>`;
-        currentSection = '';
-        continue;
-      }
-      
-      // Detectar características do produto (linhas curtas e específicas)
-      if (line.length < 50 && (
-        line.includes('Proteção') || 
-        line.includes('Tamanho') || 
-        line.includes('Material') ||
-        line.includes('Qualidade') ||
-        line.includes('UV') ||
-        line.includes('Resistente') ||
-        line.includes('Térmico')
-      )) {
-        if (currentSection) {
-          html += `<p>${currentSection}</p>`;
-          currentSection = '';
-        }
-        html += `<h3>✓ ${line}</h3>`;
-        continue;
-      }
+      line = line.trim();
 
-      // Detectar listas de características
-      if (line.includes('Padrão') || line.includes('maleável') || line.includes('Leve e') || line.includes('Isolamento')) {
-        if (currentSection) {
-          html += `<p>${currentSection}</p>`;
-          currentSection = '';
-        }
-        
-        // Criar lista de características
-        const features = [];
-        let currentLine = line;
-        
-        // Quebrar características em uma linha
-        if (currentLine.includes('Padrão')) features.push('Tamanho Padrão');
-        if (currentLine.includes('UV 50') || line.includes('UV50+')) features.push('Proteção UV 50+');
-        if (currentLine.includes('maleável')) features.push('Material 100% maleável');
-        if (currentLine.includes('Leve e Resistente')) features.push('Leve e Resistente');
-        if (currentLine.includes('Isolamento térmico')) features.push('Isolamento térmico');
-        if (currentLine.includes('Respirável')) features.push('Leve e Respirável');
-        if (currentLine.includes('Proteção Térmica')) features.push('Proteção Térmica');
-        
-        if (features.length > 0) {
-          html += '<ul>';
-          features.forEach(feature => {
-            html += `<li><strong>${feature}</strong></li>`;
-          });
-          html += '</ul>';
-        }
-        continue;
-      }
-
-      // Acumular texto normal em parágrafos
       if (line.length > 0) {
         currentSection += (currentSection ? ' ' : '') + line;
       }
     }
 
-    // Adicionar último parágrafo se existir
     if (currentSection) {
       html += `<p>${currentSection}</p>`;
     }
 
     return html;
+  }
+
+  private extractShoeFeatures(description: string): Array<{title: string, description: string}> {
+    const features = [];
+
+    if (description.includes('Couro Sintético Hidrofóbico')) {
+      features.push({
+        title: '💧 Couro Sintético Hidrofóbico',
+        description: 'Maior resistência à água e sujeira, mantendo o sapato limpo por mais tempo e facilitando sua limpeza'
+      });
+    }
+
+    if (description.includes('Microfibra')) {
+      features.push({
+        title: '🦠 Forro Interno em Microfibra',
+        description: 'Tecnologia antibacteriana que reduz a proliferação de bactérias causadoras de mau cheiro'
+      });
+    }
+
+    if (description.includes('PVC')) {
+      features.push({
+        title: '🛡️ Vira em PVC',
+        description: 'Altamente resistente ao desgaste e uso intenso'
+      });
+    }
+
+    if (description.includes('EVA')) {
+      features.push({
+        title: '☁️ Palmilha em EVA',
+        description: 'Se adapta perfeitamente ao pé, com espuma de alta densidade para máximo conforto'
+      });
+    }
+
+    return features;
+  }
+
+  private extractSizeTable(description: string): string {
+    if (!description.includes('Tabela')) return '';
+
+    return `<h3>📏 Guia de Tamanhos</h3>
+    <div class="size-guide">
+      <p><strong>Como medir seu pé:</strong></p>
+      <ol>
+        <li>Em um papel, desenhe o contorno do pé descalço</li>
+        <li>Meça do dedão ao calcanhar</li>
+        <li>Compare com a tabela abaixo</li>
+      </ol>
+
+      <div class="size-table">
+        <p><strong>Tabela de Medidas:</strong></p>
+        <p>37 - 25 cm | 38 - 25,5 cm | 39 - 26,0 cm | 40 - 26,5 cm</p>
+        <p>41 - 27,0 cm | 42 - 27,5 cm | 43 - 28,0 cm | 44 - 28,5 cm</p>
+        <p>45 - 29,0 cm | 46 - 29,5 cm</p>
+      </div>
+    </div>`;
+  }
+
+  private extractFAQ(description: string): string {
+    return `<h3>❓ Perguntas Frequentes</h3>
+    <div class="faq-section">
+      <div class="faq-item">
+        <p><strong>🔍 O produto é original?</strong></p>
+        <p>Sim, 100% original, enviado na caixa com nota fiscal.</p>
+      </div>
+
+      <div class="faq-item">
+        <p><strong>📐 O tamanho é grande ou pequeno?</strong></p>
+        <p>O tamanho segue o padrão brasileiro. Use nossa tabela de medidas para garantir o ajuste perfeito.</p>
+      </div>
+
+      <div class="faq-item">
+        <p><strong>✅ O sapato tem garantia?</strong></p>
+        <p>Sim, oferecemos garantia de 30 dias. Fabricamos com paixão e experiência há mais de 6 anos no setor calçadista.</p>
+      </div>
+    </div>`;
   }
 
   // Gerar HTML dos comentários extraídos da Shopee com imagens
